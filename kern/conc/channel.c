@@ -67,9 +67,15 @@ void wakeup_all(struct Channel *chan)
 	//COMMENT THE FOLLOWING LINE BEFORE START CODING
 	//panic("wakeup_all is not implemented yet");
 	//Your Code is Here...
+	struct spinlock *lk;
+	init_spinlock(lk, "chan_spinlock");
+	acquire_spinlock(lk);
+
 	struct Env* waited_process;//2022170213
 	LIST_FOREACH(waited_process, &chan->queue) { //2022170213
 		sched_insert_ready0(waited_process);//make it ready 2022170213
 	}//2022170213
+
+	release_spinlock(lk);
 }
 
