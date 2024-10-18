@@ -5,6 +5,7 @@
  *      Author: HP
  */
 
+#include <inc/environment_definitions.h>//2022170213
 
 #include "channel.h"
 #include <kern/proc/user_environment.h>
@@ -64,8 +65,11 @@ void wakeup_all(struct Channel *chan)
 {
 	//TODO: [PROJECT'24.MS1 - #12] [4] LOCKS - wakeup_all
 	//COMMENT THE FOLLOWING LINE BEFORE START CODING
-	panic("wakeup_all is not implemented yet");
+	//panic("wakeup_all is not implemented yet");
 	//Your Code is Here...
-
+	struct Env* waited_process;//2022170213
+	LIST_FOREACH(waited_process, &chan->queue) { //2022170213
+		sched_insert_ready0(waited_process);//make it ready 2022170213
+	}//2022170213
 }
 
