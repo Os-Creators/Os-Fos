@@ -463,7 +463,6 @@ int process_command(int number_of_arguments, char** arguments)
 		{
 			return i;
 		}
-
 	}
 	return CMD_INVALID;
 }
