@@ -4,9 +4,6 @@
  *  Created on: Sep 22, 2024
  *      Author: HP
  */
-
-#include <inc/environment_definitions.h>//2022170213
-
 #include "channel.h"
 #include <kern/proc/user_environment.h>
 #include <kern/cpu/sched.h>
@@ -49,8 +46,28 @@ void wakeup_one(struct Channel *chan)
 {
 	//TODO: [PROJECT'24.MS1 - #11] [4] LOCKS - wakeup_one
 	//COMMENT THE FOLLOWING LINE BEFORE START CODING
-	panic("wakeup_one is not implemented yet");
-	//Your Code is Here...
+	//panic("wakeup_one is not implemented yet");
+	//2022170629
+	struct spinlock *lock;
+		init_spinlock(lock, "chann_spinlock");
+		acquire_spinlock(lock);
+
+	// If the queue is empty then no processes to wakeup
+	if (chan->queue.lh_first == NULL) {
+		return;
+	}
+    struct Env_Queue *waked_process = chan->queue.lh_first;
+    chan->queue.lh_first = waked_process->___ptr_next;
+
+    //if the queue is empty set the tail to null
+    if (chan->queue.lh_first == NULL){
+    	chan->queue.lh_last = NULL;
+    }
+
+    // wake the process
+    waked_process->lh_first->env_status = "ready";
+
+    release_spinlock(lock);
 }
 
 //====================================================
@@ -65,11 +82,8 @@ void wakeup_all(struct Channel *chan)
 {
 	//TODO: [PROJECT'24.MS1 - #12] [4] LOCKS - wakeup_all
 	//COMMENT THE FOLLOWING LINE BEFORE START CODING
-	//panic("wakeup_all is not implemented yet");
+	panic("wakeup_all is not implemented yet");
 	//Your Code is Here...
-	struct Env* waited_process;//2022170213
-	LIST_FOREACH(waited_process, &chan->queue) { //2022170213
-		sched_insert_ready0(waited_process);//make it ready 2022170213
-	}//2022170213
+
 }
 
