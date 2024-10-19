@@ -65,7 +65,7 @@ void wakeup_one(struct Channel *chan)
     }
 
     // wake the process
-    waked_process->lh_first->env_status = "ready";
+    waked_process->lh_first->env_status = ENV_READY;
 
     release_spinlock(lock);
 }
