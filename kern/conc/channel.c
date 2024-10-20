@@ -75,7 +75,7 @@ void wakeup_all(struct Channel *chan)
 	struct Env* waited_process;//2022170213
 	LIST_FOREACH(waited_process, &chan->queue) { //2022170213
 		sched_insert_ready0(waited_process);//make it ready 2022170213
-		LIST_REMOVE(&chan->queue, waited_process);
+		LIST_REMOVE(&chan->queue, waited_process);//remove from blocked
 	}//2022170213
 
 	release_spinlock(&ProcessQueues.qlock);//2022170213
