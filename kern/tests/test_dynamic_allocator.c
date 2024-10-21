@@ -1646,7 +1646,38 @@ void test_realloc_block_FF()
 		cprintf("test_realloc_block_FF #3.4.2.2.3: Failed\n");
 	}
 	//[3.5] no enough space (NO relocate - NO split) -> return null shimaa
+	/*3.5.1--block after ours is free but not enough ,so FF*/
+	blockIndex = 1*allocCntPerSize -1 ;
+	new_size = 8*kilo - sizeOfMetaData;
+	expectedSize = ROUNDUP(new_size + sizeOfMetaData, 2);//if it odd will turn it to even
 
+	va = realloc_block_FF(startVAs[blockIndex], new_size);
+
+	//check content of reallocated block
+	if (*(startVAs[blockIndex]) != blockIndex || *(midVAs[blockIndex]) != blockIndex ||	*(endVAs[blockIndex]) != blockIndex)
+	{
+		is_correct = 0;
+		cprintf("test_realloc_block_FF #3.5.1.1: WRONG REALLOC! content of the block is not correct. Expected %d\n", blockIndex);
+	}
+
+	if(va != NULL)
+		panic("test_realloc_block_FF #3.5.1.2: it should return NULL.");
+
+	/*3.5.2--block after ours is not free*/
+	blockIndex = 1*allocCntPerSize + 8 ;
+	new_size = 8*kilo - sizeOfMetaData;
+	expectedSize = ROUNDUP(new_size + sizeOfMetaData, 2);//if it odd will turn it to even
+
+	va = realloc_block_FF(startVAs[blockIndex], new_size);
+	//check content of reallocated block
+	if (*(startVAs[blockIndex]) != blockIndex || *(midVAs[blockIndex]) != blockIndex ||	*(endVAs[blockIndex]) != blockIndex)
+	{
+		is_correct = 0;
+		cprintf("test_realloc_block_FF #3.5.2.1: WRONG REALLOC! content of the block is not correct. Expected %d\n", blockIndex);
+	}
+
+	if(va != NULL)
+		panic("test_realloc_block_FF #3.5.2.2: it should return NULL.");
 	//====================================================================//
 	//[4] Test realloc with decreased sizes
 	//====================================================================//
