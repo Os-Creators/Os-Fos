@@ -4,7 +4,6 @@
  *  Created on: Sep 22, 2024
  *      Author: HP
  */
-
 #include <inc/environment_definitions.h>//2022170213
 #include <kern/cpu/sched.h>//2022170213
 
@@ -51,7 +50,28 @@ void wakeup_one(struct Channel *chan)
 	//TODO: [PROJECT'24.MS1 - #11] [4] LOCKS - wakeup_one
 	//COMMENT THE FOLLOWING LINE BEFORE START CODING
 	panic("wakeup_one is not implemented yet");
-	//Your Code is Here...
+//	//2022170629
+//	struct spinlock *lock;
+//	 init_spinlock(lock, "chann_spinlock");
+//		acquire_spinlock(lock);
+//
+//	// If the queue is empty then no processes to wakeup
+//	if (chan->queue.lh_first == NULL) {
+//		return;
+//	}
+//    struct Env_Queue *waked_process = chan->queue.lh_first;
+//    chan->queue.lh_first = waked_process->___ptr_next;
+//
+//    //if the queue is empty set the tail to null
+//    if (chan->queue.lh_first == NULL){
+//    	chan->queue.lh_last = NULL;
+//    }
+//
+//    // wake the process
+//    waked_process->lh_first->env_status = ENV_READY;
+//
+//    release_spinlock(lock);
+
 }
 
 //====================================================
@@ -66,7 +86,7 @@ void wakeup_all(struct Channel *chan)
 {
 	//TODO: [PROJECT'24.MS1 - #12] [4] LOCKS - wakeup_all
 	//COMMENT THE FOLLOWING LINE BEFORE START CODING
-	//panic("wakeup_all is not implemented yet");
+	panic("wakeup_all is not implemented yet");
 	//Your Code is Here...
 	ProcessQueues.qlock;//202210213
 	init_spinlock(&ProcessQueues.qlock, "chan_spinlock");//2022170213
