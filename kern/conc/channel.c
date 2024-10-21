@@ -4,6 +4,9 @@
  *  Created on: Sep 22, 2024
  *      Author: HP
  */
+#include <inc/environment_definitions.h>//2022170213
+#include <kern/cpu/sched.h>//2022170213
+
 #include "channel.h"
 #include <kern/proc/user_environment.h>
 #include <kern/cpu/sched.h>
@@ -85,6 +88,16 @@ void wakeup_all(struct Channel *chan)
 	//COMMENT THE FOLLOWING LINE BEFORE START CODING
 	panic("wakeup_all is not implemented yet");
 	//Your Code is Here...
+	ProcessQueues.qlock;//202210213
+	init_spinlock(&ProcessQueues.qlock, "chan_spinlock");//2022170213
+	acquire_spinlock(&ProcessQueues.qlock);//2022170213
 
+	struct Env* waited_process;//2022170213
+	LIST_FOREACH(waited_process, &chan->queue) { //2022170213
+		sched_insert_ready0(waited_process);//make it ready 2022170213
+		LIST_REMOVE(&chan->queue, waited_process);//remove from blocked
+	}//2022170213
+
+	release_spinlock(&ProcessQueues.qlock);//2022170213
 }
 
