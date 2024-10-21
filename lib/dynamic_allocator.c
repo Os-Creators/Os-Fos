@@ -108,14 +108,26 @@ void initialize_dynamic_allocator(uint32 daStart, uint32 initSizeOfAllocatedSpac
 
 }
 //==================================
-// [2] SET BLOCK HEADER & FOOTER:
+// [2] SET BLOCK  & FOOTER:
 //==================================
 void set_block_data(void* va, uint32 totalSize, bool isAllocated)
 {
 	//TODO: [PROJECT'24.MS1 - #05] [3] DYNAMIC ALLOCATOR - set_block_data
 	//COMMENT THE FOLLOWING LINE BEFORE START CODING
-	panic("set_block_data is not implemented yet");
-	//Your Code is Here...
+	//panic("set_block_data is not implemented yet");
+    if (totalSize < DYN_ALLOC_MIN_BLOCK_SIZE)
+    {
+	  cprintf("The total size is not enough");
+    }
+
+   int*header = (int*) va;
+   int*footer = (int*)(char*)va + totalSize - 2*sizeof(int);
+
+   header[0]= totalSize;
+   header[1]= isAllocated;
+   footer[0]= totalSize;
+   footer[1]= isAllocated;
+
 }
 
 
@@ -133,7 +145,7 @@ void *alloc_block_FF(uint32 size)
 			size = DYN_ALLOC_MIN_BLOCK_SIZE ;
 		if (!is_initialized)
 		{
-			uint32 required_size = size + 2*sizeof(int) /*header & footer*/ + 2*sizeof(int) /*da begin & end*/ ;
+			uint32 required_size = size + 2*sizeof(int) /* & footer*/ + 2*sizeof(int) /*da begin & end*/ ;
 			uint32 da_start = (uint32)sbrk(ROUNDUP(required_size, PAGE_SIZE)/PAGE_SIZE);
 			uint32 da_break = (uint32)sbrk(0);
 			initialize_dynamic_allocator(da_start, da_break - da_start);
@@ -156,8 +168,35 @@ void *alloc_block_BF(uint32 size)
 	//TODO: [PROJECT'24.MS1 - BONUS] [3] DYNAMIC ALLOCATOR - alloc_block_BF
 	//COMMENT THE FOLLOWING LINE BEFORE START CODING
 	panic("alloc_block_BF is not implemented yet");
-	//Your Code is Here...
 
+//	struct MemBlock_LIST *bestfitblock = NULL;
+//	uint32 bestfitblocksize = DYN_ALLOC_MAX_BLOCK_SIZE;
+//
+//    if (size == 0){
+//    	return NULL;
+//    }
+//    if (size % 2 != 0) size++;	//ensure that the size is even
+//    		if (size < DYN_ALLOC_MIN_BLOCK_SIZE)
+//    			size = DYN_ALLOC_MIN_BLOCK_SIZE ;
+//
+//    uint32 required_size = size + 2*sizeof(int)+ 2*sizeof(int);
+//
+//    struct MemBlock_LIST *current = freeBlocksList.lh_first;
+//    while(current != NULL){
+//      uint32 blocksize = current->size;
+//
+//      if (blocksize >= required_size){
+//         if(blocksize < bestfitblocksize){
+//    	  bestfitblock = current;
+//    	  bestfitblocksize = blocksize;
+//         }
+//      }
+//      set_block_data(bestfitblock,current->size,1);
+//      current = current->___ptr_next;
+//    }
+//
+//
+//  return (char*)bestfitblock - 2*sizeof(int);
 }
 
 //===================================================
@@ -180,7 +219,6 @@ void *realloc_block_FF(void* va, uint32 new_size)
 	//COMMENT THE FOLLOWING LINE BEFORE START CODING
 	panic("realloc_block_FF is not implemented yet");
 	//Your Code is Here...
-
 }
 
 /*********************************************************************************************/
