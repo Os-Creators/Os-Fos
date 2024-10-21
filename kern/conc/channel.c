@@ -46,28 +46,29 @@ void wakeup_one(struct Channel *chan)
 {
 	//TODO: [PROJECT'24.MS1 - #11] [4] LOCKS - wakeup_one
 	//COMMENT THE FOLLOWING LINE BEFORE START CODING
-	//panic("wakeup_one is not implemented yet");
-	//2022170629
-	struct spinlock *lock;
-		init_spinlock(lock, "chann_spinlock");
-		acquire_spinlock(lock);
+	panic("wakeup_one is not implemented yet");
+//	//2022170629
+//	struct spinlock *lock;
+//	 init_spinlock(lock, "chann_spinlock");
+//		acquire_spinlock(lock);
+//
+//	// If the queue is empty then no processes to wakeup
+//	if (chan->queue.lh_first == NULL) {
+//		return;
+//	}
+//    struct Env_Queue *waked_process = chan->queue.lh_first;
+//    chan->queue.lh_first = waked_process->___ptr_next;
+//
+//    //if the queue is empty set the tail to null
+//    if (chan->queue.lh_first == NULL){
+//    	chan->queue.lh_last = NULL;
+//    }
+//
+//    // wake the process
+//    waked_process->lh_first->env_status = ENV_READY;
+//
+//    release_spinlock(lock);
 
-	// If the queue is empty then no processes to wakeup
-	if (chan->queue.lh_first == NULL) {
-		return;
-	}
-    struct Env_Queue *waked_process = chan->queue.lh_first;
-    chan->queue.lh_first = waked_process->___ptr_next;
-
-    //if the queue is empty set the tail to null
-    if (chan->queue.lh_first == NULL){
-    	chan->queue.lh_last = NULL;
-    }
-
-    // wake the process
-    waked_process->lh_first->env_status = ENV_READY;
-
-    release_spinlock(lock);
 }
 
 //====================================================

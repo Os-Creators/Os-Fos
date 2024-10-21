@@ -117,7 +117,7 @@ void set_block_data(void* va, uint32 totalSize, bool isAllocated)
 	//panic("set_block_data is not implemented yet");
     if (totalSize < DYN_ALLOC_MIN_BLOCK_SIZE)
     {
-	  printf("The total size is not enough");
+	  cprintf("The total size is not enough");
     }
 
    int*header = (int*) va;
@@ -167,36 +167,36 @@ void *alloc_block_BF(uint32 size)
 {
 	//TODO: [PROJECT'24.MS1 - BONUS] [3] DYNAMIC ALLOCATOR - alloc_block_BF
 	//COMMENT THE FOLLOWING LINE BEFORE START CODING
-	//panic("alloc_block_BF is not implemented yet");
+	panic("alloc_block_BF is not implemented yet");
 
-	struct MemBlock_LIST *bestfitblock = NULL;
-	uint32 bestfitblocksize = DYN_ALLOC_MAX_BLOCK_SIZE;
-
-    if (size == 0){
-    	return NULL;
-    }
-    if (size % 2 != 0) size++;	//ensure that the size is even
-    		if (size < DYN_ALLOC_MIN_BLOCK_SIZE)
-    			size = DYN_ALLOC_MIN_BLOCK_SIZE ;
-
-    uint32 required_size = size + 2*sizeof(int)+ 2*sizeof(int);
-
-    struct MemBlock_LIST *current = freeBlocksList.lh_first;
-    while(current != NULL){
-      uint32 blocksize = current->size;
-
-      if (blocksize >= required_size){
-         if(blocksize < bestfitblocksize){
-    	  bestfitblock = current;
-    	  bestfitblocksize = blocksize;
-         }
-      }
-      set_block_data(bestfitblock,current->size,1);
-      current = current->___ptr_next;
-    }
-
-
-  return (char*)bestfitblock - 2*sizeof(int);
+//	struct MemBlock_LIST *bestfitblock = NULL;
+//	uint32 bestfitblocksize = DYN_ALLOC_MAX_BLOCK_SIZE;
+//
+//    if (size == 0){
+//    	return NULL;
+//    }
+//    if (size % 2 != 0) size++;	//ensure that the size is even
+//    		if (size < DYN_ALLOC_MIN_BLOCK_SIZE)
+//    			size = DYN_ALLOC_MIN_BLOCK_SIZE ;
+//
+//    uint32 required_size = size + 2*sizeof(int)+ 2*sizeof(int);
+//
+//    struct MemBlock_LIST *current = freeBlocksList.lh_first;
+//    while(current != NULL){
+//      uint32 blocksize = current->size;
+//
+//      if (blocksize >= required_size){
+//         if(blocksize < bestfitblocksize){
+//    	  bestfitblock = current;
+//    	  bestfitblocksize = blocksize;
+//         }
+//      }
+//      set_block_data(bestfitblock,current->size,1);
+//      current = current->___ptr_next;
+//    }
+//
+//
+//  return (char*)bestfitblock - 2*sizeof(int);
 }
 
 //===================================================
