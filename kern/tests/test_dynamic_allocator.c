@@ -1291,7 +1291,11 @@ void test_realloc_block_FF()
 	*(startVAs[idx]) = idx ;
 	*(midVAs[idx]) = idx ;
 	*(endVAs[idx]) = idx ;
-	//currVA now still in the beginning of all the free bock(remaining size)
+
+	int remainIdx = idx ;
+	uint32 remainExpectedSize = expectedSize;
+	uint32 remainActualSize = actualSize;
+	//currVA now still in the beginning of all the free bock(remaining size) after fulling it ,shimaa
 	//====================================================================//
 	/* Check stored data inside each allocated block*/
 	for (int i = 0; i < idx; ++i)
@@ -1375,11 +1379,17 @@ void test_realloc_block_FF()
 			is_correct = 0;
 			cprintf("test_realloc_block_FF #3.1.1: Failed\n");
 		}
+		//check new free block address ,shimaa
+		if (check_block(startVAs[blockIndex+expectedSize], startVAs[blockIndex+expectedSize], allocSizes[3]-expectedSize, 0) == 0)
+		{
+			is_correct = 0;
+			cprintf("test_realloc_block_FF #3.1.2: Failed\n");
+		}
 		//check content of reallocated block
 		if (*(startVAs[blockIndex]) != blockIndex || *(midVAs[blockIndex]) != blockIndex ||	*(endVAs[blockIndex]) != blockIndex)
 		{
 			is_correct = 0;
-			cprintf("test_realloc_block_FF #3.1.2: WRONG REALLOC! content of the block is not correct. Expected %d\n", blockIndex);
+			cprintf("test_realloc_block_FF #3.1.3: WRONG REALLOC! content of the block is not correct. Expected %d\n", blockIndex);
 		}
 		//check the new address of the next free block is actully free ( in this case: startVAs[blockIndex]+newsize) with panic)shimaa
 		//maybe check if the addr of free block in free block list now and the old is not in free block list
@@ -1759,8 +1769,49 @@ void test_realloc_block_FF()
 	}
 	//[4.2] next block is empty (coalesce)shimaa
 			/*divide the block to [1.full block] [2. free block will join to the next free block*/
-	//the end of the full block is free blk with size = [old free + remain in our block]
-	//check free block list
+	//the end of the full block is free blk with size = [old next free + remain in our block]
+	blockIndex = 1*allocCntPerSize -1 ;
+	new_size = allocSizes[0] - 2*sizeof(char) - sizeOfMetaData;
+	expectedSize = ROUNDUP(new_size + sizeOfMetaData, 2);//if it odd will turn it to even
+	expectedVA = startVAs[blockIndex];
+
+	va = realloc_block_FF(startVAs[blockIndex], new_size);
+	//the va as expected
+	if (check_block(va, expectedVA, expectedSize, 1) == 0)
+	{
+		is_correct = 0;
+		cprintf("test_realloc_block_FF #4.2.1: Failed\n");
+	}
+	//the next free block is immediately after ours , and its size is the remainin from ours and the next free block
+	if (check_block(startVAs[blockIndex+expectedSize], startVAs[blockIndex+expectedSize], allocSizes[1] - 2*sizeof(char), 0) == 0)
+	{
+		is_correct = 0;
+		cprintf("test_realloc_block_FF #4.2.2: Failed\n");
+	}
+	//check content of reallocated block
+	if (*(startVAs[blockIndex]) != blockIndex || *(midVAs[blockIndex]) != blockIndex ||	*(endVAs[blockIndex]) != blockIndex)
+	{
+		is_correct = 0;
+		cprintf("test_realloc_block_FF #4.2.3: WRONG REALLOC! content of the block is not correct. Expected %d\n", blockIndex);
+	}
+
+	//====================================================================//
+	//[5] Test realloc in the end of the heap
+	//====================================================================//
+	blockIndex = remainIdx ;
+	new_size = remainActualSize + 1*kilo;
+	expectedSize = ROUNDUP(new_size + sizeOfMetaData, 2);//if it odd will turn it to even
+
+	va = realloc_block_FF(startVAs[blockIndex], new_size);
+	//check content of reallocated block
+	if (*(startVAs[blockIndex]) != blockIndex || *(midVAs[blockIndex]) != blockIndex ||	*(endVAs[blockIndex]) != blockIndex)
+	{
+		is_correct = 0;
+		cprintf("test_realloc_block_FF #5.1: WRONG REALLOC! content of the block is not correct. Expected %d\n", blockIndex);
+	}
+
+	if(va != NULL)
+		panic("test_realloc_block_FF #5.2: it should return NULL.");
 
 
 	cprintf("[PARTIAL] test realloc_block with FIRST FIT completed. Evaluation = %d%\n", eval);
