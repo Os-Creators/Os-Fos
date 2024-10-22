@@ -216,42 +216,115 @@ void free_block(void *va)
 void *realloc_block_FF(void* va, uint32 new_size)
 {
 	/*PLEASE NOTICE that new_size does not include meta data (header,footer) , shimaa*/
-	//[0]Test if that block is the last block in heap ..shimaa -> which is [5] in test
 	//[1] Test calling realloc with VA = NULL. It should call alloc
 	/* Try to allocate set of blocks with different sizes*/
 	/* Try to allocate a block with a size equal to the size of the first existing free block*/
 	//[2] Test realloc by passing size = 0. It should call free //return null
 	//test calling it with va & ZERO
 	//test calling it with NULL & ZERO
-	//[3] Test realloc with increased sizes
-	//[3.1] reallocate in same place (NO relocate - split)(shimaa:will take half next block)
-	//check return address
-	//check the new address of the next free block,shimaa
-	//[3.2] reallocate in same place (NO relocate - NO split) (shimaa:will take all the next block)
-	//checking the free block list (must be minus 1)shimaa
-	/*dont forget in 3.3,3.4 to move with the same content */
-	//[3.3] reallocate in another place (relocate - NO split)shimaa
-			//will change location and take full block
-			//if the size is more than the next free block
-	/*block after ours is free but not enough*/
-	/*block after ours is not free*/
-		//check if the new block we will go to will let remaining size smaller than 16?
-		//check if the new block we will go to will let remaining size greater than 16
-	//[3.4] reallocate in another place (relocate - split)shimaa
-				//will change location and take half block
-	//[3.5] no enough space (NO relocate - NO split)-> search till the end but no space -> return null ,shimaa
-
-	//[4] Test realloc with decreased sizes
-	//[4.1] next block is full (NO coalesce)
-	 //1.divide the block to [1.full block] [2. free block if it is more than 16]
-	 //2.[Internal Framgmentation]
-	//[4.2] next block is empty (coalesce)shimaa
-		/*divide the block to [1.full block] [2. free block will join to the next free block ,
-		 *  dont forget to update the addr of the beginning of the free block in free block list]*/
-	//[6] realloc with the same size
 
 
-		return va;//not the actual return value , but to avoid any error while running
+
+	bool IS_FIT = 1;
+	uint32 block_size = get_block_size(va);
+	uint32 all_new_size = new_size + 8;
+	if(all_new_size > block_size) {
+		//[3] Test realloc with increased sizes
+		uint32 the_extra_size = all_new_size - get_block_size(va);//the difference between new size and old size
+
+		struct BlockElement* next_block_addr = (struct BlockElement*)(va + (block_size - 4) + 4);//the addr of the next block , are you sure about datatypes?
+		struct BlockElement* new_next_block_addr = (struct BlockElement*)(va + (all_new_size-4) + 4);//the addr of the next block after reallocation ,after header, are you sure about datatypes?
+
+		//[]Test if that block is the last block in heap ..shimaa -> which is [5] in test
+		if(get_block_size(next_block_addr) == 1 && !is_free_block(next_block_addr)){
+			return NULL;
+		}
+
+
+		if(is_free_block(next_block_addr)) {
+
+			if(the_extra_size < get_block_size(next_block_addr)) {
+				//[3.1] reallocate in same place (NO relocate - split)(shimaa:will take part of next block)
+				//check return address
+				//check the new address of the next free block,shimaa
+				uint32 the_remaining_size = get_block_size(next_block_addr)-the_extra_size;//the remaining_size in free block after taking from it to our block
+
+				if(the_remaining_size >= 16) {
+					set_block_data(va, all_new_size, 1);
+					set_block_data(new_next_block_addr, the_remaining_size, 0);
+
+					LIST_INSERT_AFTER(&freeBlocksList, next_block_addr,new_next_block_addr);
+				}else {
+					//fragment
+					set_block_data(va, new_size+the_remaining_size,1);//will exist internal fragment (free unused mem in block)
+				}
+
+				LIST_REMOVE(&freeBlocksList, next_block_addr);
+				return va;
+
+			}else if(the_extra_size == get_block_size(next_block_addr)){
+				//[3.2] reallocate in same place (NO relocate - NO split) (shimaa:will take all the next block)
+				set_block_data(va, all_new_size,1);//will exist internal fragment (free unused mem in block)
+				LIST_REMOVE(&freeBlocksList, next_block_addr);
+				return va;
+
+			}else {
+				//reallocate in another place
+				IS_FIT = 0;
+			}
+		}
+		if(!is_free_block(next_block_addr) || !IS_FIT) {
+			//using first fit
+			struct BlockElement* free_block;
+			bool is_next_free_block_found = 0;
+			LIST_FOREACH(free_block, &freeBlocksList) {
+				if( free_block > va && get_block_size(free_block) >= the_extra_size ){/*comparing addresses*/
+					/*dont forget in 3.3,3.4 to move with the same content */
+					//[3.3] reallocate in another place (relocate - NO split)shimaa
+					//will change location and take full block
+					//if the size is more than the next free block
+					/*block after ours is free but not enough*/
+					/*block after ours is not free*/
+					//check if the new block we will go to will let remaining size smaller than 16?
+					//check if the new block we will go to will let remaining size greater than 16
+					//[3.4] reallocate in another place (relocate - split)shimaa
+					//will change location and take half block
+					is_next_free_block_found =1;
+				}
+			}
+
+			if(!is_next_free_block_found){
+				//[3.5] no enough space (NO relocate - NO split)-> search till the end but no space -> return null ,shimaa
+				return NULL;
+			}
+		}
+	}else if (all_new_size < block_size){
+		//shrinking the block and update the free block list
+
+		//[4] Test realloc with decreased sizes
+		//[4.1] next block is full (NO coalesce)
+		 //1.divide the block to [1.full block] [2. free block if it is more than 16]
+		 //2.[Internal Framgmentation]
+		//[4.2] next block is empty (coalesce)shimaa
+			/*divide the block to [1.full block] [2. free block will join to the next free block ,
+			 *  dont forget to update the addr of the beginning of the free block in free block list]*/
+	}else {
+		//[6] realloc with the same size
+
+	}
+
+
+
+
+
+
+
+	//TODO: [PROJECT'24.MS1 - #08] [3] DYNAMIC ALLOCATOR - realloc_block_FF
+	//COMMENT THE FOLLOWING LINE BEFORE START CODING
+	//panic("realloc_block_FF is not implemented yet");
+	//Your Code is Here...
+
+	return va;//not the actual return value , but to avoid any error while running
 
 }
 
