@@ -215,10 +215,44 @@ void free_block(void *va)
 //=========================================
 void *realloc_block_FF(void* va, uint32 new_size)
 {
-	//TODO: [PROJECT'24.MS1 - #08] [3] DYNAMIC ALLOCATOR - realloc_block_FF
-	//COMMENT THE FOLLOWING LINE BEFORE START CODING
-	panic("realloc_block_FF is not implemented yet");
-	//Your Code is Here...
+	/*PLEASE NOTICE that new_size does not include meta data (header,footer) , shimaa*/
+	//[0]Test if that block is the last block in heap ..shimaa -> which is [5] in test
+	//[1] Test calling realloc with VA = NULL. It should call alloc
+	/* Try to allocate set of blocks with different sizes*/
+	/* Try to allocate a block with a size equal to the size of the first existing free block*/
+	//[2] Test realloc by passing size = 0. It should call free //return null
+	//test calling it with va & ZERO
+	//test calling it with NULL & ZERO
+	//[3] Test realloc with increased sizes
+	//[3.1] reallocate in same place (NO relocate - split)(shimaa:will take half next block)
+	//check return address
+	//check the new address of the next free block,shimaa
+	//[3.2] reallocate in same place (NO relocate - NO split) (shimaa:will take all the next block)
+	//checking the free block list (must be minus 1)shimaa
+	/*dont forget in 3.3,3.4 to move with the same content */
+	//[3.3] reallocate in another place (relocate - NO split)shimaa
+			//will change location and take full block
+			//if the size is more than the next free block
+	/*block after ours is free but not enough*/
+	/*block after ours is not free*/
+		//check if the new block we will go to will let remaining size smaller than 16?
+		//check if the new block we will go to will let remaining size greater than 16
+	//[3.4] reallocate in another place (relocate - split)shimaa
+				//will change location and take half block
+	//[3.5] no enough space (NO relocate - NO split)-> search till the end but no space -> return null ,shimaa
+
+	//[4] Test realloc with decreased sizes
+	//[4.1] next block is full (NO coalesce)
+	 //1.divide the block to [1.full block] [2. free block if it is more than 16]
+	 //2.[Internal Framgmentation]
+	//[4.2] next block is empty (coalesce)shimaa
+		/*divide the block to [1.full block] [2. free block will join to the next free block ,
+		 *  dont forget to update the addr of the beginning of the free block in free block list]*/
+	//[6] realloc with the same size
+
+
+		return va;//not the actual return value , but to avoid any error while running
+
 }
 
 /*********************************************************************************************/
