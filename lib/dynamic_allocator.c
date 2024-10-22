@@ -278,7 +278,7 @@ void *realloc_block_FF(void* va, uint32 new_size)
 			struct BlockElement* free_block;
 			bool is_next_free_block_found = 0;
 			LIST_FOREACH(free_block, &freeBlocksList) {
-				if( free_block > va && get_block_size(free_block) >= the_extra_size ){/*comparing addresses*/
+				if( free_block > (struct BlockElement*) va && get_block_size(free_block) >= the_extra_size ){/*comparing addresses*/
 					/*dont forget in 3.3,3.4 to move with the same content */
 					//[3.3] reallocate in another place (relocate - NO split)shimaa
 					//will change location and take full block
