@@ -219,9 +219,19 @@ void *realloc_block_FF(void* va, uint32 new_size)
 	//[1] Test calling realloc with VA = NULL. It should call alloc
 	/* Try to allocate set of blocks with different sizes*/
 	/* Try to allocate a block with a size equal to the size of the first existing free block*/
+	if(va == NULL){
+		return alloc_block_FF(new_size);
+	}
 	//[2] Test realloc by passing size = 0. It should call free //return null
 	//test calling it with va & ZERO
+	if(new_size == 0 && va != NULL){
+		free_block(va);
+		return NULL;
+	}
 	//test calling it with NULL & ZERO
+	if(new_size == 0 && va != NULL){
+		return alloc_block_FF(0);
+	}
 
 
 
@@ -320,7 +330,7 @@ void *realloc_block_FF(void* va, uint32 new_size)
 		uint32 remainig_size = block_size-all_new_size;
 
 		//[4] Test realloc with decreased sizes
-		//[4.0] newsizze<16
+		//[4.0] new size<16
 		if(is_free_block(new_next_block_addr)){
 			//[4.2] next block is empty (coalesce)shimaa
 				/*divide the block to [1.full block] [2. free block will join to the next free block ,
