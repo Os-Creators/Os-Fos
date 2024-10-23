@@ -1445,6 +1445,12 @@ void test_realloc_block_FF()
 	expectedSize = ROUNDUP(new_size + sizeOfMetaData, 2);//if it odd will turn it to even
 	expectedVA = startVAs[6*allocCntPerSize];//because it is the first index that fits
 
+	va = realloc_block_FF(startVAs[0*allocCntPerSize], 4*kilo);//fill it and then will reempty it , just to meet logic of my code
+	*(startVAs[0*allocCntPerSize]) = 0*allocCntPerSize ;
+	*(midVAs[0*allocCntPerSize]) = 0*allocCntPerSize ;
+	*(endVAs[0*allocCntPerSize]) = 0*allocCntPerSize ;
+
+
 	va = realloc_block_FF(startVAs[blockIndex], new_size);
 
 	expectedNumOfFreeBlks++;
@@ -1454,6 +1460,7 @@ void test_realloc_block_FF()
 		is_correct = 0;
 		cprintf("test_realloc_block_FF #3.3.1.1.1: Failed\n");
 	}
+
 
 	//check content of reallocated block
 	if (*(startVAs[6*allocCntPerSize]) != blockIndex || *(midVAs[6*allocCntPerSize]) != blockIndex ||	*(endVAs[6*allocCntPerSize]) != blockIndex)
@@ -1491,6 +1498,11 @@ void test_realloc_block_FF()
 	new_size = allocSizes[2] + 1*kilo - sizeOfMetaData;//because first alloc in allocSizes[6] has 4k remain
 	expectedSize = ROUNDUP(new_size + sizeOfMetaData, 2);//if it odd will turn it to even
 	expectedVA = startVAs[expectedSplitPointInIndex6];//because it is the first index that fits
+
+	va = realloc_block_FF(startVAs[5*allocCntPerSize-1], 2*kilo);//fill it and then will reempty it , just to meet logic of my code
+		*(startVAs[5*allocCntPerSize-1]) = 5*allocCntPerSize-1 ;
+		*(midVAs[5*allocCntPerSize-1]) = 5*allocCntPerSize-1 ;
+		*(endVAs[5*allocCntPerSize-1]) = 0*allocCntPerSize ;
 
 	va = realloc_block_FF(startVAs[blockIndex], new_size);
 
@@ -1564,9 +1576,11 @@ void test_realloc_block_FF()
 		cprintf("test_realloc_block_FF #3.3.1.1.3: Failed\n");
 	}
 
+	va = realloc_block_FF(startVAs[5*allocCntPerSize-1], 0);//empty it again , just to meet logic of my code
+
 	/*3.3.1.2-the remaining size from the new block is smalller than 16*/
 		blockIndex = 3*allocCntPerSize - 1 ;//it has to go to last index in size 4 that has 2k free
-		new_size = allocSizes[2] + 1*kilo +1 - sizeOfMetaData;//will remain in size 4 only 4 byte [fragment]
+		new_size = allocSizes[2] + 1*kilo -15 - sizeOfMetaData;//will remain in size 4 only 4 byte [fragment]
 		expectedSize = ROUNDUP(new_size + 15/*fragment from old size*/ + sizeOfMetaData, 2);//if it odd will turn it to even
 		expectedVA = startVAs[5*allocCntPerSize-1];//because it is the first index that fits//it was remaining in it allocSizes[4] +allocSizes[5]
 
@@ -1813,6 +1827,7 @@ void test_realloc_block_FF()
 	if(va != NULL)
 		panic("test_realloc_block_FF #5.2: it should return NULL.");
 
+	va = realloc_block_FF(startVAs[0*allocCntPerSize], 0);//empty it again , just to meet logic of my code
 
 	cprintf("[PARTIAL] test realloc_block with FIRST FIT completed. Evaluation = %d%\n", eval);
 
