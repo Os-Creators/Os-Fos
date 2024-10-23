@@ -87,50 +87,98 @@ bool is_initialized = 0;
 //==================================
 // [1] INITIALIZE DYNAMIC ALLOCATOR:
 //==================================
+
 void initialize_dynamic_allocator(uint32 daStart, uint32 initSizeOfAllocatedSpace)
 {
-	//==================================================================================
-	//DON'T CHANGE THESE LINES==========================================================
-	//==================================================================================
-	{
-		if (initSizeOfAllocatedSpace % 2 != 0) initSizeOfAllocatedSpace++; //ensure it's multiple of 2
-		if (initSizeOfAllocatedSpace == 0)
-			return ;
-		is_initialized = 1;
-	}
+
+
 	//==================================================================================
 	//==================================================================================
 
 	//TODO: [PROJECT'24.MS1 - #04] [3] DYNAMIC ALLOCATOR - initialize_dynamic_allocator
 	//COMMENT THE FOLLOWING LINE BEFORE START CODING
-	panic("initialize_dynamic_allocator is not implemented yet");
+    //panic("initialize_dynamic_allocator is not implemented yet");
 	//Your Code is Here...
+	//2022170597
+	// each block in the linked list
+		struct block597 {
+		    uint32 size;
+		    struct block597* next;
+		    struct block597* prev;
+		};
+		// Free block list structure
+		struct block597_LIST {
+		    struct block597* head;        // First free block in the list
+		    struct block597* tail;        // Last free block in the list
+		};
+		// Free block list declaration
+		struct block597_LIST Freeblock597List;
+		// Function to initialize the list
+		void lamiaa597 (struct block597_LIST* list) {
+		    list->head = NULL;
+		    list->tail = NULL;
+		}
+		// Function to insert a block at the head of the list
+		void insertBlock597Fun(struct block597_LIST* list, struct block597* block) {
+		    block->next = list->head;
+		    block->prev = NULL;
+		    if (list->head != NULL) {
+		        list->head->prev = block;
+		    }
+		    list->head = block;
+		    if (list->tail == NULL) {
+		        list->tail = block;
+		    }
+		}
+		// Function to insert a block at the end of the list
+		void insertEndblock597Fun(struct block597_LIST* list, struct block597* block) {
+		    block->next = NULL;
+		    block->prev = list->tail;
+		    if (list->tail != NULL) {
+		        list->tail->next = block;
+		    }
+		    list->tail = block;
+		    if (list->head == NULL) {
+		        list->head = block;
+		    }
+		}
+		//==================================================================================
+			//DON'T CHANGE THESE LINES==========================================================
+			//==================================================================================
+			{
+				if (initSizeOfAllocatedSpace % 2 != 0) initSizeOfAllocatedSpace++; //ensure it's multiple of 2
+				if (initSizeOfAllocatedSpace == 0)
+					return ;
+				is_initialized = 1;
+			}
+	//a pointer to point on a first block by starting address
+	struct block597* firstblock597 = (struct block597 *) daStart;
+	//Set the BEG block size and mark it as free
+	//(first "0" for "size" second for "free")
+	firstblock597->size = initSizeOfAllocatedSpace | 0x0;
+	//Set up the END block after the first block
+		uint32 endblock597 = daStart + initSizeOfAllocatedSpace;  // Address of the end block
+	    struct block597* endBlock = (struct block597 *) endblock597;
+	    //The END block should have a size of 0
+	    endBlock->size = 0;
+	//Initialize the free block list
+	lamiaa597(&Freeblock597List);
+	//Insert the BEG block into the free block list
+	insertBlock597Fun(&Freeblock597List, firstblock597);
+
+    //Insert the END block at the end of the list
+    insertEndblock597Fun(&Freeblock597List, endBlock);  // Insert the end block at the end
 
 }
 //==================================
-// [2] SET BLOCK  & FOOTER:
+// [2] SET BLOCK HEADER & FOOTER:
 //==================================
 void set_block_data(void* va, uint32 totalSize, bool isAllocated)
 {
 	//TODO: [PROJECT'24.MS1 - #05] [3] DYNAMIC ALLOCATOR - set_block_data
 	//COMMENT THE FOLLOWING LINE BEFORE START CODING
-	//panic("set_block_data is not implemented yet");
-
-	//2022170629
-    if (totalSize < DYN_ALLOC_MIN_BLOCK_SIZE)
-    {
-	  cprintf("The total size is not enough to set the data");
-	  return;
-    }
-	//2022170629
-   int *meta_header = (int*)((char *)va - sizeof(int)); // Searchhh
-   int *meta_footer = (int*)(char*)va + totalSize - sizeof(int);
-    //2022170629
-   meta_header[0]= totalSize;
-   meta_header[1]= isAllocated? 1 : 0;
-   meta_footer[0]= totalSize;
-   meta_footer[1]= isAllocated? 1 : 0;
-
+	panic("set_block_data is not implemented yet");
+	//Your Code is Here...
 }
 
 
@@ -148,7 +196,7 @@ void *alloc_block_FF(uint32 size)
 			size = DYN_ALLOC_MIN_BLOCK_SIZE ;
 		if (!is_initialized)
 		{
-			uint32 required_size = size + 2*sizeof(int) /* & footer*/ + 2*sizeof(int) /*da begin & end*/ ;
+			uint32 required_size = size + 2*sizeof(int) /*header & footer*/ + 2*sizeof(int) /*da begin & end*/ ;
 			uint32 da_start = (uint32)sbrk(ROUNDUP(required_size, PAGE_SIZE)/PAGE_SIZE);
 			uint32 da_break = (uint32)sbrk(0);
 			initialize_dynamic_allocator(da_start, da_break - da_start);
@@ -161,7 +209,7 @@ void *alloc_block_FF(uint32 size)
 	//COMMENT THE FOLLOWING LINE BEFORE START CODING
 	panic("alloc_block_FF is not implemented yet");
 	//Your Code is Here...
-   return 0;
+
 }
 //=========================================
 // [4] ALLOCATE BLOCK BY BEST FIT:
@@ -170,75 +218,9 @@ void *alloc_block_BF(uint32 size)
 {
 	//TODO: [PROJECT'24.MS1 - BONUS] [3] DYNAMIC ALLOCATOR - alloc_block_BF
 	//COMMENT THE FOLLOWING LINE BEFORE START CODING
-	//panic("alloc_block_BF is not implemented yet");
+	panic("alloc_block_BF is not implemented yet");
+	//Your Code is Here...
 
-	//2022170629
-	struct BlockElement *mbestfitblock = NULL;
-	uint32 mbestfitblocksize = DYN_ALLOC_MAX_BLOCK_SIZE;
-
-	if (!is_initialized) {
-	        uint32 required_size = size + 2 * sizeof(uint32) + 2 * sizeof(uint32);
-	        uint32 da_start = (uint32)sbrk(0);
-	        void *allocated_memory = sbrk(ROUNDUP(required_size, PAGE_SIZE));
-	        if (allocated_memory == (void *)-1) {
-	            return NULL;
-	        }
-
-	        initialize_dynamic_allocator(da_start, (uint32)(sbrk(0) - da_start));
-
-	        is_initialized = 1;
-	    }
-	//2022170629
-    if (size == 0){
-    	return NULL;
-    }
-    if (size % 2 != 0) size++;
-    		if (size < DYN_ALLOC_MIN_BLOCK_SIZE)
-    			size = DYN_ALLOC_MIN_BLOCK_SIZE ;
-    uint32 size_needed_by_blocks = size + 2*sizeof(uint32);
-
-    //2022170629
-
-    struct BlockElement *now;
-    LIST_FOREACH(now ,&freeBlocksList) {
-        uint32 mblocksize = sizeof(*now);
-
-        if (mblocksize >= size_needed_by_blocks) {
-            if (mblocksize < mbestfitblocksize) {
-                mbestfitblock = now;
-                mbestfitblocksize = mblocksize;
-            }
-        }
-    }
-
-    if (mbestfitblock == NULL) {
-
-        mbestfitblock = (struct BlockElement *)sbrk(ROUNDUP(size_needed_by_blocks + sizeof(mbestfitblock), PAGE_SIZE));
-        if (mbestfitblock == (void *)-1) {
-            return NULL;
-        }
-        *((uint32 *)mbestfitblock) = size_needed_by_blocks;
-               mbestfitblock = (struct BlockElement *)((char *)mbestfitblock + sizeof(uint32));
-        } else {
-            uint32 remaining_size = mbestfitblocksize - size_needed_by_blocks;
-
-            if (remaining_size > 0)
-            {
-                if (remaining_size >= (DYN_ALLOC_MIN_BLOCK_SIZE + sizeof(uint32) + sizeof(uint32))) {
-                struct BlockElement *new_block = (struct BlockElement *)((char *)mbestfitblock + size_needed_by_blocks);
-                set_block_data(new_block, remaining_size, 0);
-                new_block->prev_next_info.le_next = mbestfitblock->prev_next_info.le_next;
-                if (new_block->prev_next_info.le_next != NULL) {
-                    new_block->prev_next_info.le_next->prev_next_info.le_prev = new_block;
-                }
-
-                mbestfitblock->prev_next_info.le_next = new_block;
-                new_block->prev_next_info.le_prev = mbestfitblock;
-             }
-            set_block_data(mbestfitblock,size_needed_by_blocks,1);
-        }
-        }
-   return 0;
 }
 
 //===================================================
@@ -257,164 +239,10 @@ void free_block(void *va)
 //=========================================
 void *realloc_block_FF(void* va, uint32 new_size)
 {
-	/*PLEASE NOTICE that new_size does not include meta data (header,footer) , shimaa*/
-	//[1] Test calling realloc with VA = NULL. It should call alloc
-	/* Try to allocate set of blocks with different sizes*/
-	/* Try to allocate a block with a size equal to the size of the first existing free block*/
-	if(va == NULL){
-		return alloc_block_FF(new_size);
-	}
-	//[2] Test realloc by passing size = 0. It should call free //return null
-	//test calling it with va & ZERO
-	if(new_size == 0 && va != NULL){
-		free_block(va);
-		return NULL;
-	}
-	//test calling it with NULL & ZERO
-	if(new_size == 0 && va != NULL){
-		return alloc_block_FF(0);
-	}
-
-
-
-
-	bool IS_FIT = 1;
-	uint32 block_size = get_block_size(va);
-	uint32 all_new_size = new_size + 8;
-	struct BlockElement* next_block_addr = (struct BlockElement*)(va + (block_size - 4) + 4);//the addr of the next block , are you sure about datatypes?
-	struct BlockElement* new_next_block_addr = (struct BlockElement*)(va + (all_new_size-4) + 4);//the addr of the next block after reallocation ,after header, are you sure about datatypes?
-
-	//[]Test if that block is the last block in heap ..shimaa -> which is [5] in test
-	if(get_block_size(next_block_addr) == 1 && !is_free_block(next_block_addr)){
-		return alloc_block_FF(new_size);
-		//sbrk(the_extra_size/(4*1024));
-		//return NULL;
-	}
-
-
-	if(all_new_size > block_size) {
-		//[3] Test realloc with increased sizes
-		uint32 the_extra_size = all_new_size - block_size;//the difference between new size and old size
-
-
-		uint32 next_block_size = get_block_size(next_block_addr);
-
-
-
-		if(is_free_block(next_block_addr)) {
-
-			if(the_extra_size < next_block_size) {
-				//[3.1] reallocate in same place (NO relocate - split)(shimaa:will take part of next block)
-				//check return address
-				//check the new address of the next free block,shimaa
-				uint32 the_remaining_size = next_block_size-the_extra_size;//the remaining_size in free block after taking from it to our block
-
-				if(the_remaining_size >= 16) {
-
-					set_block_data(va, all_new_size, 1);
-					set_block_data(new_next_block_addr, the_remaining_size, 0);
-
-
-					free_block(new_next_block_addr);
-					//LIST_INSERT_AFTER(&freeBlocksList, next_block_addr,new_next_block_addr);
-				}
-				else {
-					//fragment
-					//check by nouran
-					set_block_data(va, block_size+next_block_size,1);//will exist internal fragment (free unused mem in block)
-				}
-
-				LIST_REMOVE(&freeBlocksList, next_block_addr);
-				return va;
-
-			}else if(the_extra_size == next_block_size){
-				//[3.2] reallocate in same place (NO relocate - NO split) (shimaa:will take all the next block)
-				set_block_data(va, all_new_size,1);//will exist internal fragment (free unused mem in block)
-				LIST_REMOVE(&freeBlocksList, next_block_addr);
-				return va;
-
-			}else {
-				//reallocate in another place
-				//IS_FIT = 0;
-				//ask raazan how to realloc with data
-				//ask razan will va be void or int or what?
-				uint32* new_va = (uint32*)alloc_block_FF(new_size);
-				uint32 tmp_block_size = block_size - 8;//check
-				while (tmp_block_size--) {
-					*new_va++ = *((uint32*)va++);
-				}
-				return new_va;
-			}
-		}else {
-			uint32* new_va = alloc_block_FF(new_size);
-			uint32 tmp_block_size = block_size - 8;//check
-			while (tmp_block_size--) {
-				*new_va++ = *((uint32*)va++);
-			}
-			return new_va;
-		}
-		/*dont forget in 3.3,3.4 to move with the same content */
-		//[3.3] reallocate in another place (relocate - NO split)shimaa
-		//will change location and take full block
-		//if the size is more than the next free block
-		/*block after ours is free but not enough*/
-		/*block after ours is not free*/
-		//check if the new block we will go to will let remaining size smaller than 16?
-		//check if the new block we will go to will let remaining size greater than 16
-		//[3.4] reallocate in another place (relocate - split)shimaa
-		//will change location and take half block
-		//[3.5] no enough space (NO relocate - NO split)-> search till the end but no space -> return null ,shimaa
-
-
-	}else if (all_new_size < block_size){
-		//shrinking the block and update the free block list
-		if (all_new_size % 2 != 0) all_new_size++; //ensure it's multiple of 2
-		uint32 remainig_size = block_size-all_new_size;
-
-		//[4] Test realloc with decreased sizes
-		//[4.0] new size<16
-		//[4.1] next block is full (NO coalesce)
-		 //1.divide the block to [1.full block] [2. free block if it is more than 16]
-		 //2.[Internal Framgmentation]
-		//[4.2] next block is empty (coalesce)shimaa
-			/*divide the block to [1.full block] [2. free block will join to the next free block ,
-			 *  dont forget to update the addr of the beginning of the free block in free block list]*/
-
-		if(all_new_size < 16)
-		{
-			new_next_block_addr = va + 16;
-			remainig_size = block_size -16;
-			all_new_size=16;
-
-		}
-		if(remainig_size>=16)
-		{
-			//merge
-			set_block_data(va, all_new_size , 1);
-			set_block_data(new_next_block_addr,remainig_size,0); //check free implementaion
-
-			free_block(new_next_block_addr);
-
-			//call free or continue coding
-		}
-		return va;
-
-
-
-	}else {
-		//[6] realloc with the same size
-		return va;
-	}
-
-
-
-
 	//TODO: [PROJECT'24.MS1 - #08] [3] DYNAMIC ALLOCATOR - realloc_block_FF
 	//COMMENT THE FOLLOWING LINE BEFORE START CODING
-	//panic("realloc_block_FF is not implemented yet");
+	panic("realloc_block_FF is not implemented yet");
 	//Your Code is Here...
-	//return va;//not the actual return value , but to avoid any error while running
-
 }
 
 /*********************************************************************************************/
@@ -426,7 +254,7 @@ void *realloc_block_FF(void* va, uint32 new_size)
 void *alloc_block_WF(uint32 size)
 {
 	panic("alloc_block_WF is not implemented yet");
-	return (void*) NULL;
+	return NULL;
 }
 
 //=========================================
@@ -435,5 +263,5 @@ void *alloc_block_WF(uint32 size)
 void *alloc_block_NF(uint32 size)
 {
 	panic("alloc_block_NF is not implemented yet");
-	return (void*) NULL;
+	return NULL;
 }
