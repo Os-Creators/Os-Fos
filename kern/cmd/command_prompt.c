@@ -455,14 +455,71 @@ int execute_command(char *command_string)
 
 int process_command(int number_of_arguments, char** arguments)
 {
-	//TODO: [PROJECT'24.MS1 - #01] [1] PLAY WITH CODE! - process_command
+   int command_found=0;
+     int command_matched=0;
+   int actual_number_of_arguments=number_of_arguments-1; // without command name
+   LIST_INIT(&foundCommands);
 
-	for (int i = 0; i < NUM_OF_COMMANDS; i++)
-	{
-		if (strcmp(arguments[0], commands[i].name) == 0)
-		{
-			return i;
-		}
-	}
-	return CMD_INVALID;
+    for (int i = 0; i < NUM_OF_COMMANDS; i++)
+    {
+      if (strcmp(arguments[0], commands[i].name) == 0) //found
+      {
+        command_found=1;
+        if(commands[i].num_of_args==-1)
+        {
+          if(actual_number_of_arguments>=1)
+          {
+             return i;
+          }
+        }
+        else
+        {
+          if(actual_number_of_arguments==commands[i].num_of_args)
+          {
+             return i;
+          }
+        }
+
+        LIST_INIT(&foundCommands);
+        LIST_INSERT_HEAD(&foundCommands,&commands[i]); //inavlid nunmber of arguments
+        return CMD_INV_NUM_ARGS;
+      }
+         else
+       {
+           char *command_name=commands[i].name;
+           char *argument_name=arguments[0];
+           int command_size=strlen(command_name);
+           int argument_size=strlen(argument_name);
+             int j=0;
+             int k=0;
+              for(j=0;j<argument_size;j++)
+            {
+               int char_found=0;
+               for(;k<command_size;k++)
+                 {
+                   if(argument_name[j]==command_name[k])
+                 {
+                    char_found=1;
+                   k++;
+                   break;
+                 }
+                }
+               if(char_found==0) break;
+            }
+
+            if(j==argument_size) //found all characters
+              {
+               LIST_INSERT_TAIL(&foundCommands,&commands[i]);
+               command_matched=1;
+            }
+        }
+      }
+
+     if(command_matched)
+     {
+      return CMD_MATCHED;
+     }
+
+
+  return CMD_INVALID;
 }
