@@ -123,8 +123,8 @@ void set_block_data(void* va, uint32 totalSize, bool isAllocated)
 	  return;
     }
 	//2022170629
-   int*meta_header = ((uint32 *)va - 1);
-   int*meta_footer = (int*)(char*)va + totalSize - sizeof(uint32);
+   int *meta_header = (int*)((char *)va - sizeof(int)); // Searchhh
+   int *meta_footer = (int*)(char*)va + totalSize - sizeof(int);
     //2022170629
    meta_header[0]= totalSize;
    meta_header[1]= isAllocated? 1 : 0;
@@ -173,8 +173,21 @@ void *alloc_block_BF(uint32 size)
 	//panic("alloc_block_BF is not implemented yet");
 
 	//2022170629
-	struct MemBlock_LIST *mbestfitblock = NULL;
+	struct BlockElement *mbestfitblock = NULL;
 	uint32 mbestfitblocksize = DYN_ALLOC_MAX_BLOCK_SIZE;
+
+	if (!is_initialized) {
+	        uint32 required_size = size + 2 * sizeof(uint32) + 2 * sizeof(uint32);
+	        uint32 da_start = (uint32)sbrk(0);
+	        void *allocated_memory = sbrk(ROUNDUP(required_size, PAGE_SIZE));
+	        if (allocated_memory == (void *)-1) {
+	            return NULL;
+	        }
+
+	        initialize_dynamic_allocator(da_start, (uint32)(sbrk(0) - da_start));
+
+	        is_initialized = 1;
+	    }
 	//2022170629
     if (size == 0){
     	return NULL;
@@ -182,55 +195,50 @@ void *alloc_block_BF(uint32 size)
     if (size % 2 != 0) size++;
     		if (size < DYN_ALLOC_MIN_BLOCK_SIZE)
     			size = DYN_ALLOC_MIN_BLOCK_SIZE ;
-    uint32 size_needed_by_blocks = size + sizeof(uint32)+ sizeof(uint32);
+    uint32 size_needed_by_blocks = size + 2*sizeof(uint32);
 
     //2022170629
 
-    struct MemBlock_LIST *now = LIST_FIRST(freeBlocksList);
-    while(now != NULL){
-      uint32 mblocksize = now->size;
+    struct BlockElement *now;
+    LIST_FOREACH(now ,&freeBlocksList) {
+        uint32 mblocksize = sizeof(*now);
 
-      if (mblocksize >= size_needed_by_blocks){
-         if(mblocksize < mbestfitblocksize){
-    	  mbestfitblock = now;
-    	  mbestfitblocksize = mblocksize;
-         }
-      }
-      now = now->___ptr_next;
+        if (mblocksize >= size_needed_by_blocks) {
+            if (mblocksize < mbestfitblocksize) {
+                mbestfitblock = now;
+                mbestfitblocksize = mblocksize;
+            }
+        }
     }
-      if (mbestfitblock == NULL) {
-    	  uint32 pagas_size = getpagesize();
-    	  uint32 pagas_needed = (size_needed_by_blocks + pagas_size - 1) / pagas_size;
 
-    	  mbestfitblock = (struct MemBlock_LIST *)sbrk(pagas_needed * pagas_size);
-    	  if (mbestfitblock == (void *)-1)
-    	  {
-    	      return NULL;
-    	  }
-    	  mbestfitblock->size = size_needed_by_blocks;
+    if (mbestfitblock == NULL) {
 
+        mbestfitblock = (struct BlockElement *)sbrk(ROUNDUP(size_needed_by_blocks + sizeof(mbestfitblock), PAGE_SIZE));
+        if (mbestfitblock == (void *)-1) {
+            return NULL;
+        }
+        *((uint32 *)mbestfitblock) = size_needed_by_blocks;
+               mbestfitblock = (struct BlockElement *)((char *)mbestfitblock + sizeof(uint32));
         } else {
             uint32 remaining_size = mbestfitblocksize - size_needed_by_blocks;
 
             if (remaining_size > 0)
             {
                 if (remaining_size >= (DYN_ALLOC_MIN_BLOCK_SIZE + sizeof(uint32) + sizeof(uint32))) {
-                struct MemBlock_LIST *new_block = (struct MemBlock_LIST *)((char *)bestfitblock + size_needed_by_blocks);
+                struct BlockElement *new_block = (struct BlockElement *)((char *)mbestfitblock + size_needed_by_blocks);
                 set_block_data(new_block, remaining_size, 0);
-                new_block->___ptr_next = mbestfitblock->___ptr_next; // Point new block to the next block
-                mbestfitblock->___ptr_next = new_block;
+                new_block->prev_next_info.le_next = mbestfitblock->prev_next_info.le_next;
+                if (new_block->prev_next_info.le_next != NULL) {
+                    new_block->prev_next_info.le_next->prev_next_info.le_prev = new_block;
+                }
+
+                mbestfitblock->prev_next_info.le_next = new_block;
+                new_block->prev_next_info.le_prev = mbestfitblock;
              }
             set_block_data(mbestfitblock,size_needed_by_blocks,1);
         }
-    if (!is_initialized)
-          		{
-          			uint32 required_size = size + 2*sizeof(int) + 2*sizeof(int);
-          			uint32 da_start = mbestfitblock;
-          			uint32 da_break = (uint32)sbrk(0);
-          			initialize_dynamic_allocator(da_start, da_break - da_start);
-          		}
- }
-      return (void*) mbestfitblock;
+        }
+   return 0;
 }
 
 //===================================================
@@ -265,7 +273,7 @@ void *realloc_block_FF(void* va, uint32 new_size)
 void *alloc_block_WF(uint32 size)
 {
 	panic("alloc_block_WF is not implemented yet");
-	return NULL;
+	return (void*) NULL;
 }
 
 //=========================================
@@ -274,5 +282,5 @@ void *alloc_block_WF(uint32 size)
 void *alloc_block_NF(uint32 size)
 {
 	panic("alloc_block_NF is not implemented yet");
-	return NULL;
+	return (void*) NULL;
 }
