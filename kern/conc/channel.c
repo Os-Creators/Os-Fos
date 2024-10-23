@@ -52,15 +52,16 @@ void wakeup_one(struct Channel *chan)
 		acquire_spinlock(&ProcessQueues.qlock);
 
 		// If the queue is empty then no processes to wake up
-		if (LIST_FIRST(chan->queue) == NULL) {
+		if (LIST_LAST(&(chan->queue)) == NULL) {
 			release_spinlock(&ProcessQueues.qlock);
 			return;
 		}
-	    struct Env *Mays_waked_process = LIST_FIRST(chan->queue);
+	    struct Env *Mays_waked_process = LIST_LAST(&(chan->queue));
 
 	    // wake the process
 	    Mays_waked_process->env_status = ENV_READY;
-	    remove_from_queue(chan->queue,Mays_waked_process);
+	    sched_insert_ready0(Mays_waked_process);
+	    dequeue(&(chan->queue));
 
 	 release_spinlock(&ProcessQueues.qlock);
   }
