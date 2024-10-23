@@ -1219,7 +1219,9 @@ void test_realloc_block_FF()
 
 	//TODO: [PROJECT'24.MS1 - #09] [3] DYNAMIC ALLOCATOR - test_realloc_block_FF()
 	//CHECK MISSING CASES AND TRY TO TEST THEM !
+
 	//add if that block is the last block
+
 	cprintf("===================================================\n");
 	cprintf("*****NOTE: THIS IS A PARTIAL TEST FOR REALLOC******\n") ;
 	cprintf("You need to pick-up the missing tests and test them\n") ;
@@ -1296,6 +1298,7 @@ void test_realloc_block_FF()
 	uint32 remainExpectedSize = expectedSize;
 	uint32 remainActualSize = actualSize;
 	//currVA now still in the beginning of all the free bock(remaining size) after fulling it ,shimaa
+
 	//====================================================================//
 	/* Check stored data inside each allocated block*/
 	for (int i = 0; i < idx; ++i)
@@ -1306,11 +1309,13 @@ void test_realloc_block_FF()
 
 	if (is_correct)
 	{
+
 		eval += 10;//loading of the testing
 	}
 
 	//====================================================================//
 	//[2] Test realloc by passing size = 0. It should call free
+
 	//====================================================================//
 	cprintf("2: Test calling realloc with SIZE = 0.[10%]\n\n") ;
 	is_correct = 1;
@@ -1320,10 +1325,13 @@ void test_realloc_block_FF()
 	{
 		va = realloc_block_FF(startVAs[i*allocCntPerSize], 0);//0 -> first block with first size,200 -> first block with second size...till 7*200 with 7th size(shimaa)
 
+
 		uint32 block_size = get_block_size(startVAs[i*allocCntPerSize]) ;
 		expectedSize = allocSizes[i];
 		expectedVA = va;
+
 		if (check_block(startVAs[i*allocCntPerSize], startVAs[i*allocCntPerSize], expectedSize, 0) == 0)/*we checked with startVAs not va because va is null now*/
+
 		{
 			panic("test_realloc_block_FF #2.1.%d: Failed.", i);
 		}
@@ -1341,6 +1349,7 @@ void test_realloc_block_FF()
 	for (int i = 0; i < idx; ++i)
 	{
 		if (i % allocCntPerSize == 0)//0,200,2*200... will ignore them because they are now empty
+
 			continue;
 		if (*(startVAs[i]) != i || *(midVAs[i]) != i ||	*(endVAs[i]) != i)
 			panic("test_realloc_block_FF #2.4.%d: WRONG! content of the block is not correct. Expected %d",i, i);
@@ -1368,6 +1377,7 @@ void test_realloc_block_FF()
 	{
 		blockIndex = 4*allocCntPerSize - 1 ; //it would have size of allocSizes[3] the last element in it --,-- , we already freed first block in each size
 		new_size = allocSizes[3] /*12+16 B*/ + allocSizes[4]/2 /*2KB/2*/ - sizeOfMetaData; //the new size is its size (allocSizes[3]) and half the next size (allocSizes[4])
+
 		expectedSize = ROUNDUP(new_size + sizeOfMetaData, 2);
 		expectedVA = startVAs[blockIndex];
 
@@ -1385,6 +1395,7 @@ void test_realloc_block_FF()
 			is_correct = 0;
 			cprintf("test_realloc_block_FF #3.1.2: Failed\n");
 		}
+
 		//check content of reallocated block
 		if (*(startVAs[blockIndex]) != blockIndex || *(midVAs[blockIndex]) != blockIndex ||	*(endVAs[blockIndex]) != blockIndex)
 		{
@@ -1393,6 +1404,7 @@ void test_realloc_block_FF()
 		}
 		//check the new address of the next free block is actully free ( in this case: startVAs[blockIndex]+newsize) with panic)shimaa
 		//maybe check if the addr of free block in free block list now and the old is not in free block list
+
 	}
 	if (is_correct)
 	{
@@ -1404,6 +1416,7 @@ void test_realloc_block_FF()
 	is_correct = 1;
 	{
 		blockIndex = 4*allocCntPerSize - 1 ;//now first block in four is not totally free so we will finish it ,shimaa
+
 		//new_size = allocSizes[3] /*12+16B + 2KB/2*/ + allocSizes[4]/2 /*2KB/2*/ - sizeOfMetaData;
 		new_size = allocSizes[3] + allocSizes[4] - sizeOfMetaData;
 		expectedSize = ROUNDUP(new_size + sizeOfMetaData, 2);
@@ -1427,6 +1440,7 @@ void test_realloc_block_FF()
 
 		//checking the free block list (must be minus 1)shimaa
 		if (is_correct) is_correct = check_list_size(expectedNumOfFreeBlks);
+
 
 
 	}
@@ -1702,6 +1716,7 @@ void test_realloc_block_FF()
 
 	if(va != NULL)
 		panic("test_realloc_block_FF #3.5.2.2: it should return NULL.");
+
 	//====================================================================//
 	//[4] Test realloc with decreased sizes
 	//====================================================================//
@@ -1828,6 +1843,7 @@ void test_realloc_block_FF()
 		panic("test_realloc_block_FF #5.2: it should return NULL.");
 
 	va = realloc_block_FF(startVAs[0*allocCntPerSize], 0);//empty it again , just to meet logic of my code
+
 
 	cprintf("[PARTIAL] test realloc_block with FIRST FIT completed. Evaluation = %d%\n", eval);
 

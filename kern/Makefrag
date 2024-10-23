@@ -119,4 +119,3 @@ grub: $(OBJDIR)/fos-grub
 $(OBJDIR)/fos-grub: $(OBJDIR)/kern/kernel
 	@echo + oc $@
 	$(V)$(OBJCOPY) --adjust-vma=0x10000000 $^ $@
-
