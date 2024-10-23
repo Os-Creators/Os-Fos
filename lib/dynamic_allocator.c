@@ -244,9 +244,9 @@ void *realloc_block_FF(void* va, uint32 new_size)
 
 	//[]Test if that block is the last block in heap ..shimaa -> which is [5] in test
 	if(get_block_size(next_block_addr) == 1 && !is_free_block(next_block_addr)){
-		//return alloc_block_FF(new_size);
+		return alloc_block_FF(new_size);
 		//sbrk(the_extra_size/(4*1024));
-		return NULL;
+		//return NULL;
 	}
 
 
@@ -331,43 +331,32 @@ void *realloc_block_FF(void* va, uint32 new_size)
 
 		//[4] Test realloc with decreased sizes
 		//[4.0] new size<16
-		if(is_free_block(new_next_block_addr)){
-			//[4.2] next block is empty (coalesce)shimaa
-				/*divide the block to [1.full block] [2. free block will join to the next free block ,
-				 *  dont forget to update the addr of the beginning of the free block in free block list]*/
+		//[4.1] next block is full (NO coalesce)
+		 //1.divide the block to [1.full block] [2. free block if it is more than 16]
+		 //2.[Internal Framgmentation]
+		//[4.2] next block is empty (coalesce)shimaa
+			/*divide the block to [1.full block] [2. free block will join to the next free block ,
+			 *  dont forget to update the addr of the beginning of the free block in free block list]*/
 
-			if(all_new_size < 16){
-				set_block_data(va, 16 , 1);//check if second param is all size our without metadata
-				set_block_data(new_next_block_addr, block_size-16 , 0);//is it needed before freeblock or not
+		if(all_new_size < 16)
+		{
+			new_next_block_addr = va + 16;
+			remainig_size = block_size -16;
+			all_new_size=16;
 
-				free_block(new_next_block_addr);
-
-			}else{
-				set_block_data(va,all_new_size , 1);
-				set_block_data(new_next_block_addr,remainig_size  , 0);//is it needed before freeblock or not
-
-				free_block(new_next_block_addr);
-			}
-
-		}else{
-			//[4.1] next block is full (NO coalesce)
-			 //1.divide the block to [1.full block] [2. free block if it is more than 16]
-			 //2.[Internal Framgmentation]
-			if(all_new_size < 16){
-
-			}else{
-
-			}
-
-			if(remainig_size < 16){
-				return va;
-			}else{
-				set_block_data(va,all_new_size , 1);
-				set_block_data(new_next_block_addr,remainig_size  , 0);//is it needed before freeblock or not
-
-				free_block(new_next_block_addr);
-			}
 		}
+		if(remainig_size>=16)
+		{
+			//merge
+			set_block_data(va, all_new_size , 1);
+			set_block_data(new_next_block_addr,remainig_size,0); //check free implementaion
+
+			free_block(new_next_block_addr);
+
+			//call free or continue coding
+		}
+		return va;
+
 
 
 	}else {
@@ -378,14 +367,12 @@ void *realloc_block_FF(void* va, uint32 new_size)
 
 
 
-
-
 	//TODO: [PROJECT'24.MS1 - #08] [3] DYNAMIC ALLOCATOR - realloc_block_FF
 	//COMMENT THE FOLLOWING LINE BEFORE START CODING
 	//panic("realloc_block_FF is not implemented yet");
 	//Your Code is Here...
 
-	return va;//not the actual return value , but to avoid any error while running
+	//return va;//not the actual return value , but to avoid any error while running
 
 }
 
