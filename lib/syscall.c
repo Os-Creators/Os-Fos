@@ -306,7 +306,7 @@ void* sys_sbrk(int increment)
 void sys_free_user_mem(uint32 virtual_address, uint32 size)
 {
 	//Comment the following line before start coding...
-	panic("not implemented yet");
+	//panic("not implemented yet");
 }
 
 void sys_allocate_user_mem(uint32 virtual_address, uint32 size)
