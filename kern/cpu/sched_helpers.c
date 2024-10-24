@@ -650,6 +650,7 @@ int env_get_nice(struct Env* e)
 	//Your code is here
 	//Comment the following line
 	panic("Not implemented yet");
+	return 0;
 }
 
 void env_set_nice(struct Env* e, int nice_value)
@@ -666,6 +667,7 @@ int env_get_recent_cpu(struct Env* e)
 	//Your code is here
 	//Comment the following line
 	panic("Not implemented yet");
+	return 0;
 }
 int get_load_average()
 {

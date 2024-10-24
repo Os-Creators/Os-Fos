@@ -32,20 +32,45 @@ int holding_sleeplock(struct sleeplock *lk)
 
 void acquire_sleeplock(struct sleeplock *lk)
 {
-	//TODO: [PROJECT'24.MS1 - #13] [4] LOCKS - acquire_sleeplock
+//TODO: [PROJECT'24.MS1 - #13] [4] LOCKS - acquire_sleeplock
 	//COMMENT THE FOLLOWING LINE BEFORE START CODING
-	panic("acquire_sleeplock is not implemented yet");
+	//panic("acquire_sleeplock is not implemented yet");
 	//Your Code is Here...
+		acquire_spinlock(&(lk->lk));
+
+		while (lk->locked == 1)    //if(holding_sleeplock(lk))
+		{
+		  sleep(&(lk->chan),&(lk->lk));  // go to sleep
+		}
+
+		lk->locked = 1;
+		lk->pid = get_cpu_proc()->env_id;   //related to above comment
+		release_spinlock(&(lk->lk));
 
 }
 
 void release_sleeplock(struct sleeplock *lk)
 {
-	//TODO: [PROJECT'24.MS1 - #14] [4] LOCKS - release_sleeplock
-	//COMMENT THE FOLLOWING LINE BEFORE START CODING
-	panic("release_sleeplock is not implemented yet");
-	//Your Code is Here...
+  //TODO: [PROJECT'24.MS1 - #14] [4] LOCKS - release_sleeplock
+  //COMMENT THE FOLLOWING LINE BEFORE START CODING
+  //panic("release_sleeplock is not implemented yet");
+  //Your Code is Here...
+    acquire_spinlock(&(lk->lk));
+      if(lk->pid!=get_cpu_proc()->env_id)
+      {
+        release_spinlock(&(lk->lk));
+        return;
+      }
 
+   int size=queue_size(&(lk->chan.queue));
+   if(size>0) // not empty //2022170432
+   {
+     wakeup_all(&(lk->chan));
+   }
+
+   lk->locked=0; //free //2022170432
+   lk->pid=-1;
+  release_spinlock(&(lk->lk)); //2022170432
 }
 
 

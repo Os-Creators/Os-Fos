@@ -50,3 +50,16 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+
+# Ignore everything by default
+/*
+
+# Do not ignore the .gitignore file itself
+!.gitignore
+
+# Whitelist lib and kern folders
+!/lib/
+!/kern/
+!/inc/
+
+# You can still add specific files or subdirectories to ignore within lib/ and kern/ if needed.
