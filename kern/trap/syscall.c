@@ -301,7 +301,7 @@ int sys_pf_calculate_allocated_pages(void)
 /*******************************/
 void sys_free_user_mem(uint32 virtual_address, uint32 size)
 {
-	if(isBufferingEnabled())
+		if(isBufferingEnabled())
 	{
 		__free_user_mem_with_buffering(cur_env, virtual_address, size);
 	}
@@ -310,22 +310,73 @@ void sys_free_user_mem(uint32 virtual_address, uint32 size)
 		free_user_mem(cur_env, virtual_address, size);
 	}
 	return;
+
+	if(virtual_address>USER_HEAP_MAX||virtual_address<USER_HEAP_START||virtual_address==0){
+				env_exit();
+			}
+			else{
+				if(isBufferingEnabled())
+					{
+						__free_user_mem_with_buffering(cur_env, virtual_address, size);
+					}
+					else
+					{
+						free_user_mem(cur_env, virtual_address, size);
+					}
+					return;
+
+			}
+//	if(isBufferingEnabled())
+//	{
+//		__free_user_mem_with_buffering(cur_env, virtual_address, size);
+//	}
+//	else
+//	{
+//		free_user_mem(cur_env, virtual_address, size);
+//	}
+//	return;
 }
 
 void sys_allocate_user_mem(uint32 virtual_address, uint32 size)
 {
 	//TODO: [PROJECT'24.MS1 - #03] [2] SYSTEM CALLS - Params Validation
 
+	//allocate_user_mem(cur_env, virtual_address, size);
+	//return;
+	//TODO: [PROJECT'24.MS1 - #03] [2] SYSTEM CALLS - Params Validation
+
+
 	allocate_user_mem(cur_env, virtual_address, size);
 	return;
+
+if(virtual_address>USER_HEAP_MAX||virtual_address<USER_HEAP_START||virtual_address==0){
+			env_exit();
+		}
+		else{
+			allocate_user_mem(cur_env, virtual_address, size);
+				return;
+		}
 }
 
 void sys_allocate_chunk(uint32 virtual_address, uint32 size, uint32 perms)
 {
 	//TODO: [PROJECT'24.MS1 - #03] [2] SYSTEM CALLS - Params Validation
 
+	//allocate_chunk(cur_env->env_page_directory, virtual_address, size, perms);
+	//return;
+	//TODO: [PROJECT'24.MS1 - #03] [2] SYSTEM CALLS - Params Validation
+
+
 	allocate_chunk(cur_env->env_page_directory, virtual_address, size, perms);
 	return;
+
+	if(virtual_address>USER_HEAP_MAX||virtual_address<USER_HEAP_START||virtual_address==0){
+					env_exit();
+				}
+			else{
+				allocate_chunk(cur_env->env_page_directory, virtual_address, size, perms);
+					return;
+			}
 }
 
 //2014
