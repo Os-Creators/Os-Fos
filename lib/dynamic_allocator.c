@@ -111,16 +111,17 @@ void initialize_dynamic_allocator(uint32 daStart, uint32 initSizeOfAllocatedSpac
 			}
 
 
-    uint32* BEGblock597 = (uint32*) daStart ;
+    uint32* BEGblock = (uint32*) daStart ;
     uint32* ENDBlock = (uint32*) (daStart +  initSizeOfAllocatedSpace - sizeof(int));
-	struct BlockElement* first597block = (struct BlockElement*)daStart;
-	set_block_data(first597block,initSizeOfAllocatedSpace-8,0);
-	freeBlocksList.lh_first = first597block;
-	freeBlocksList.lh_last = first597block;
-	((struct BlockElement*)BEGblock597)->prev_next_info.le_next = first597block;
-	first597block->prev_next_info.le_prev = (struct BlockElement*)BEGblock597;
-	first597block->prev_next_info.le_next = (struct BlockElement*)ENDBlock;
-	((struct BlockElement*)ENDBlock)->prev_next_info.le_prev = first597block;
+
+    *(BEGblock) = 1;
+    *(ENDBlock) = 1;
+
+	struct BlockElement* firstblock = (struct BlockElement*)(daStart+(2*sizeof(int)));
+
+	set_block_data(firstblock, initSizeOfAllocatedSpace - 8 ,0);
+
+	LIST_INSERT_HEAD(&freeBlocksList, firstblock);
 
 }
 //==================================
@@ -133,26 +134,22 @@ void set_block_data(void* va, uint32 totalSize, bool isAllocated)
 	//COMMENT THE FOLLOWING LINE BEFORE START CODING
 	//panic("set_block_data is not implemented yet");
 
-	//2022170629
+
     if (totalSize < DYN_ALLOC_MIN_BLOCK_SIZE)
     {
 	  cprintf("The total size is not enough to set the data");
 	  return;
     }
-	//2022170629
-    uint32 header = (uint32)va;
+
+    uint32* header = (uint32*)(va-sizeof(int));
+    uint32* footer = (uint32*)(va+totalSize-(2*sizeof(int)));
 
 
-        *(uint32*)(header) = totalSize;
-        *(uint32*)(header + 4) = isAllocated ? 1 : 0;
+    uint32 Size_withAlloc = (totalSize & ~0x1) | (isAllocated ? 0x1 : 0x0);
 
+    *(header) = *(footer) = Size_withAlloc;
 
-        uint32 footer = header + totalSize - 8;
-
-
-        *(uint32*)(footer) = totalSize;
-        *(uint32*)(footer + 4) = isAllocated ? 1 : 0;
-    }
+}
 
 
 
@@ -174,6 +171,7 @@ void *alloc_block_FF(uint32 size)
 			uint32 da_start = (uint32)sbrk(ROUNDUP(required_size, PAGE_SIZE)/PAGE_SIZE);
 			uint32 da_break = (uint32)sbrk(0);
 			initialize_dynamic_allocator(da_start, da_break - da_start);
+
 		}
 	}
 	//==================================================================================
@@ -184,52 +182,65 @@ void *alloc_block_FF(uint32 size)
     //panic("alloc_block_FF is not implemented yet");
 	//Your Code is Here...
     //2022170597
-	 if (size == 0)
-		    {
-			  return NULL;
-		    }
+
+	if (size == 0)
+	{
+	  return NULL;
+	}
 	struct BlockElement * mfirst597fitblock = NULL;
 	uint32 mfirst597fitblocksize;
-	uint32 size_needed_by_blocks = size + 2*sizeof(uint32);
-	 struct BlockElement *now;
-	    LIST_FOREACH(now ,&freeBlocksList) {
-	        uint32 mblocksize = sizeof(*now);
+	uint32 size_needed_by_blocks = size + 2*sizeof(int);
+	struct BlockElement *now;
 
-	        if (mblocksize >= size_needed_by_blocks) {
+	LIST_FOREACH(now ,&freeBlocksList) {
+		uint32 mblocksize = get_block_size(now);
 
-	        	 mfirst597fitblock = now;
-	                mfirst597fitblocksize = mblocksize;
+		if (mblocksize >= size_needed_by_blocks) {
 
-	        }
-	    }
-	    if ( mfirst597fitblock == NULL) {
+			mfirst597fitblock = now;
+			mfirst597fitblocksize = mblocksize;
+			break;
 
-	    	 mfirst597fitblock = (struct BlockElement *)sbrk(ROUNDUP(size_needed_by_blocks + sizeof( mfirst597fitblock), PAGE_SIZE));
-	           if ( mfirst597fitblock == (void *)-1) {
-	               return NULL;
-	           }
-	           *((uint32 *) mfirst597fitblock) = size_needed_by_blocks;
-	                  mfirst597fitblock = (struct BlockElement *)((char *) mfirst597fitblock + sizeof(uint32));
-	           } else {
-	               uint32 remaining_size = mfirst597fitblocksize - size_needed_by_blocks;
+		}
+	}
 
-	               if (remaining_size > 0)
-	               {
-	                   if (remaining_size >= (DYN_ALLOC_MIN_BLOCK_SIZE + sizeof(uint32) + sizeof(uint32))) {
-	                   struct BlockElement *new_block = (struct BlockElement *)((char *) mfirst597fitblock + size_needed_by_blocks);
-	                   set_block_data(new_block, remaining_size, 0);
-	                   new_block->prev_next_info.le_next =  mfirst597fitblock->prev_next_info.le_next;
-	                   if (new_block->prev_next_info.le_next != NULL) {
-	                       new_block->prev_next_info.le_next->prev_next_info.le_prev = new_block;
-	                   }
+	if ( mfirst597fitblock == NULL) {
 
-	                   mfirst597fitblock->prev_next_info.le_next = new_block;
-	                   new_block->prev_next_info.le_prev = mfirst597fitblock;
-	                }
-	               set_block_data( mfirst597fitblock,size_needed_by_blocks,1);
-	           }
-	           }
-	      return 0;
+		//see ROUNDUP -> sprk-----------------
+		mfirst597fitblock = (struct BlockElement *)sbrk(ROUNDUP(size_needed_by_blocks + sizeof( mfirst597fitblock), PAGE_SIZE));
+		if ( mfirst597fitblock == (void *)-1) {
+			return NULL;
+		}
+
+	   //*((uint32 *) mfirst597fitblock) = size_needed_by_blocks;
+		//mfirst597fitblock = (struct BlockElement *)((char *) mfirst597fitblock + sizeof(uint32));
+	} else {
+	   uint32 remaining_size = mfirst597fitblocksize - size_needed_by_blocks;
+
+
+	   //block fits and have more
+	   if (remaining_size >= (DYN_ALLOC_MIN_BLOCK_SIZE + sizeof(uint32) + sizeof(uint32))/*16*/) {
+		   //no fragment
+		   struct BlockElement *new_block = (struct BlockElement *)((char *) mfirst597fitblock + size_needed_by_blocks);
+
+		   set_block_data(new_block, remaining_size, 0);
+
+		   free_block(new_block);
+	       //LIST_INSERT_AFTER(&freeBlocksList,mfirst597fitblock , new_block);
+	       LIST_REMOVE(&freeBlocksList, mfirst597fitblock);
+
+
+	       set_block_data( mfirst597fitblock,size_needed_by_blocks,1);
+
+	   }else{
+		   //fragment
+		   set_block_data(mfirst597fitblock, mfirst597fitblocksize, 1);
+		   LIST_REMOVE(&freeBlocksList, mfirst597fitblock);
+	   }
+
+
+	}
+	return mfirst597fitblock;
 }
 //=========================================
 // [4] ALLOCATE BLOCK BY BEST FIT:
@@ -357,7 +368,7 @@ void free_block(void *va)
             merge_blocks(MLFblock597, MLFnext_block597);
         }
 
-    }
+}
 
 
 
@@ -394,7 +405,7 @@ void *realloc_block_FF(void* va, uint32 new_size)
 	struct BlockElement* new_next_block_addr = (struct BlockElement*)(va + (all_new_size-4) + 4);//the addr of the next block after reallocation ,after header, are you sure about datatypes?
 
 	//[]Test if that block is the last block in heap ..shimaa -> which is [5] in test
-	if(get_block_size(next_block_addr) == 1 && !is_free_block(next_block_addr)){
+	if(get_block_size(next_block_addr) == 0 && !is_free_block(next_block_addr)){
 		return alloc_block_FF(new_size);
 		//sbrk(the_extra_size/(4*1024));
 		//return NULL;
