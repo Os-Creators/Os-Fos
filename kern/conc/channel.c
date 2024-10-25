@@ -30,8 +30,24 @@ void sleep(struct Channel *chan, struct spinlock* lk)
 {
 	//TODO: [PROJECT'24.MS1 - #10] [4] LOCKS - sleep
 	//COMMENT THE FOLLOWING LINE BEFORE START CODING
-	panic("sleep is not implemented yet");
+	//panic("sleep is not implemented yet");
 	//Your Code is Here...
+
+	struct Env* curr_env=get_cpu_proc();
+
+	if(holding_spinlock(&ProcessQueues.qlock)==0) acquire_spinlock(&ProcessQueues.qlock);
+
+        if(holding_spinlock(lk)==1) release_spinlock(lk); // guard //2022170473
+
+    	curr_env->env_status = ENV_BLOCKED;//2022170473
+    	enqueue(&(chan->queue),curr_env);//2022170473
+
+    	sched();//2022170473
+
+        while(curr_env != get_cpu_proc());//2022170473
+        if(holding_spinlock(lk)==0) acquire_spinlock(lk);//2022170473
+
+    if(holding_spinlock(&ProcessQueues.qlock)==1) release_spinlock(&ProcessQueues.qlock);
 
 }
 
@@ -44,27 +60,21 @@ void sleep(struct Channel *chan, struct spinlock* lk)
 // chan MUST be of type "struct Env_Queue" to hold the blocked processes
 void wakeup_one(struct Channel *chan)
 {
-		//TODO: [PROJECT'24.MS1 - #11] [4] LOCKS - wakeup_one
-		//COMMENT THE FOLLOWING LINE BEFORE START CODING
-		//panic("wakeup_one is not implemented yet");
-		//2022170629
-		init_spinlock(&ProcessQueues.qlock, "MaChannelSpinlock");
-		acquire_spinlock(&ProcessQueues.qlock);
+	//TODO: [PROJECT'24.MS1 - #11] [4] LOCKS - wakeup_one
+	//COMMENT THE FOLLOWING LINE BEFORE START CODING
+	//panic("wakeup_one is not implemented yet");
 
-		// If the queue is empty then no processes to wake up
-		if (LIST_LAST(&(chan->queue)) == NULL) {
-			release_spinlock(&ProcessQueues.qlock);
-			return;
-		}
-	    struct Env *Mays_waked_process = LIST_LAST(&(chan->queue));
+	if(holding_spinlock(&ProcessQueues.qlock)==0) acquire_spinlock(&ProcessQueues.qlock);
 
-	    // wake the process
-	    Mays_waked_process->env_status = ENV_READY;
-	    sched_insert_ready0(Mays_waked_process);
-	    dequeue(&(chan->queue));
+    struct Env *Mays_waked_process = dequeue(&(chan->queue));//2022170473
+    if(Mays_waked_process!=NULL)//2022170473
+    {
+    	sched_insert_ready0(Mays_waked_process);//2022170473
+    }
 
-	 release_spinlock(&ProcessQueues.qlock);
-  }
+    if(holding_spinlock(&ProcessQueues.qlock)==1) release_spinlock(&ProcessQueues.qlock);
+
+}
 
 //====================================================
 // 4) WAKEUP ALL BLOCKED PROCESSES ON A GIVEN CHANNEL:
@@ -77,20 +87,14 @@ void wakeup_one(struct Channel *chan)
 void wakeup_all(struct Channel *chan)
 {
 	//TODO: [PROJECT'24.MS1 - #12] [4] LOCKS - wakeup_all
-		//COMMENT THE FOLLOWING LINE BEFORE START CODING
-		//panic("wakeup_all is not implemented yet");
-		//Your Code is Here...
-		ProcessQueues.qlock;//202210213
-		init_spinlock(&ProcessQueues.qlock, "chan_spinlock");//2022170213
-		acquire_spinlock(&ProcessQueues.qlock);//2022170213
+	//COMMENT THE FOLLOWING LINE BEFORE START CODING
+	//panic("wakeup_all is not implemented yet");
+	//Your Code is Here...
 
-		struct Env* waited_process;//2022170213
-		LIST_FOREACH(waited_process, &chan->queue) { //2022170213
-			sched_insert_ready0(waited_process);//make it ready 2022170213
-			LIST_REMOVE(&chan->queue, waited_process);//remove from blocked
-		}//2022170213
-
-		release_spinlock(&ProcessQueues.qlock);//2022170213
+	while (LIST_LAST(&(chan->queue))!=NULL)//202210213
+	{
+	   wakeup_one(chan);//202210213
+	}//2022170473
 
 }
 
