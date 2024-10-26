@@ -225,8 +225,8 @@ void *alloc_block_FF(uint32 size)
 
 		   set_block_data(new_block, remaining_size, 0);
 
-		   free_block(new_block);
-	       //LIST_INSERT_AFTER(&freeBlocksList,mfirst597fitblock , new_block);
+		   //free_block(new_block);
+	       LIST_INSERT_AFTER(&freeBlocksList,mfirst597fitblock , new_block);
 	       LIST_REMOVE(&freeBlocksList, mfirst597fitblock);
 
 
@@ -240,6 +240,8 @@ void *alloc_block_FF(uint32 size)
 
 
 	}
+	//cprintf("header in alloc. Actual addr H:%d H2:%p\n", *((uint32*)mfirst597fitblock-1), (uint32*)(mfirst597fitblock-4));
+
 	return mfirst597fitblock;
 }
 //=========================================
@@ -325,48 +327,89 @@ void *alloc_block_BF(uint32 size)
 //===================================================
 void free_block(void *va)
 {
-	//TODO: [PROJECT'24.MS1 - #07] [3] DYNAMIC ALLOCATOR - free_block
-	//COMMENT THE FOLLOWING LINE BEFORE START CODING
-    //panic("free_block is not implemented yet");
-	//Your Code is Here...
-    void merge_blocks(struct BlockElement *MLFprev_block, struct BlockElement *MLFcurrent_block)
-    {
+	bool is_in_free_list(void* block){
+		struct BlockElement* tmp_block;
 
-	    uint32 combined_size = get_block_size(MLFprev_block) + get_block_size(MLFcurrent_block);
+		LIST_FOREACH (tmp_block, &freeBlocksList){
 
-	    set_block_data(MLFprev_block, combined_size, 0);
+			if((struct BlockElement*)block == tmp_block){
+				return 1;
+			}
 
-	     MLFprev_block->prev_next_info.le_next = MLFcurrent_block->prev_next_info.le_next;
-
-	  }
-
-	if (va == NULL){
-		cprintf("The virtual address is Null please try agin later");
-		return;
+		}
+		return 0;
 	}
 
-    if (is_free_block(va))
-	{
-		cprintf("The given Block is already Free");
-		return;
+
+	void insert_block_in_order(struct BlockElement* block) {
+	    struct BlockElement* current = freeBlocksList.lh_first;
+
+	    // If list is empty, insert as the only element
+	    if ( LIST_SIZE(&freeBlocksList) == 0) {
+	        LIST_INSERT_HEAD(&freeBlocksList,block);
+	        return;
+	    }
+
+	    // Traverse the list to find the correct position
+
+	    struct BlockElement* tmp_block;
+	    bool found_place = 0;
+
+	    LIST_FOREACH (tmp_block, &freeBlocksList){
+
+	    	if(tmp_block > block){
+	    		LIST_INSERT_BEFORE(&freeBlocksList, tmp_block, block );
+	    		found_place = 1;
+	    		break;
+			}
+		}
+
+	    if(!found_place)
+	    	LIST_INSERT_TAIL(&freeBlocksList, block);
+
 	}
 
-    struct BlockElement *MLFblock597 = (struct BlockElement *)((char *)va - sizeof(struct BlockElement));
-    uint32 MLFblockSize597 = get_block_size(va);
-    set_block_data(va, MLFblockSize597, 0);
+    if (va == NULL){
+        cprintf("The virtual address is Null please try again later");
+        return;
+    }
 
-    //free(MLFblock597);
+    uint32 size_of_prev_block = get_block_size((uint32 *)(va - sizeof(int)));//by footer, get_block_size will minus another 4byte
+	struct BlockElement* brev_block_addr = (struct BlockElement *)((uint32 *)(va - size_of_prev_block));//footer of prev block
 
-    struct BlockElement *MLFprev_block597 = MLFblock597->prev_next_info.le_prev;
-    struct BlockElement *MLFnext_block597 = MLFblock597->prev_next_info.le_next;
+	uint32 block_size = get_block_size(va);
+	uint32 size_needed_by_block = get_block_size(va);
+	struct BlockElement *new_block = (struct BlockElement *)((uint32 *)(va + size_needed_by_block));
 
-    if (MLFprev_block597 && is_free_block(MLFprev_block597)) {
-            merge_blocks(MLFprev_block597, MLFblock597);
-        }
+	struct BlockElement* begin_of_the_free_block = va;
 
-        if (MLFnext_block597 && is_free_block(MLFnext_block597)) {
-            merge_blocks(MLFblock597, MLFnext_block597);
-        }
+	//brev is free?
+	if (is_free_block(brev_block_addr)){
+		block_size += get_block_size(brev_block_addr);
+		set_block_data(brev_block_addr, block_size, 0);
+		begin_of_the_free_block = brev_block_addr;
+
+		//if VA already was free and in list , remove it (cause the begin changed)
+		if(is_in_free_list(va))LIST_REMOVE(&freeBlocksList, (struct BlockElement*)va);
+
+		//will not insert any thing in list because (brev block) already was
+
+	}else{
+		set_block_data(va, block_size, 0);
+		if(!is_in_free_list(va)) insert_block_in_order((struct BlockElement*)va);
+	}
+
+	//next is free?
+	if (is_free_block(new_block)) {
+
+		block_size += get_block_size(new_block);
+		set_block_data(begin_of_the_free_block, block_size, 0);
+
+		LIST_REMOVE(&freeBlocksList, new_block);
+
+	}
+
+
 
 }
 
