@@ -42,6 +42,8 @@ int check_block(void* va, void* expectedVA, uint32 expectedSize, uint8 expectedF
 	if(header != expectedData || footer != expectedData)
 	{
 		cprintf("wrong header/footer data. Expected %d, Actual H:%d F:%d\n", expectedData, header, footer);
+		cprintf("wrong header/footer data. Expected addr %p, Actual addr H:%p H2:%p\n", (uint32*)expectedVA-1, (uint32*)va-1, (uint32*)(va-4));
+
 		return 0;
 	}
 	return 1;
@@ -679,7 +681,16 @@ void test_free_block_FF()
 	for (int i = 0; i < numOfAllocs; ++i)
 	{
 		cprintf("test#%d\n",i);
+		/*cprintf("size %d and %d\n",get_block_size(startVAs[i*allocCntPerSize]),allocSizes[i]);
+		cprintf("header before free. Actual addr H:%d H2:%p\n", *((uint32*)startVAs[i*allocCntPerSize]-1), (uint32*)(startVAs[i*allocCntPerSize]-4));
+		cprintf("BEG before free. %d is free? %d\n", *((uint32*)startVAs[i*allocCntPerSize]-2),is_free_block((uint32*)startVAs[i*allocCntPerSize]-2));
+		*/
 		free_block(startVAs[i*allocCntPerSize]);
+
+		/*cprintf("BEG after free. %d is free? %d\n", *((uint32*)startVAs[i*allocCntPerSize]-2),is_free_block((uint32*)startVAs[i*allocCntPerSize]-2));
+		cprintf("after free size %d and %d\n",get_block_size(startVAs[i*allocCntPerSize]),allocSizes[i]);
+		*/
+
 		if (check_block(startVAs[i*allocCntPerSize], startVAs[i*allocCntPerSize], allocSizes[i], 0) == 0)
 		{
 			is_correct = 0;
