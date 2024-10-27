@@ -218,6 +218,7 @@ void *alloc_block_FF(uint32 size)
 	} else {
 	   uint32 remaining_size = mfirst597fitblocksize - size_needed_by_blocks;
 
+	   //we dont have to check if after me is empty or not , because it will never be (if it was it would be already merged before)
 
 	   //block fits and have more
 	   if (remaining_size >= (DYN_ALLOC_MIN_BLOCK_SIZE + sizeof(uint32) + sizeof(uint32))/*16*/) {
@@ -449,6 +450,8 @@ void *realloc_block_FF(void* va, uint32 new_size)
 	bool IS_FIT = 1;
 	uint32 block_size = get_block_size(va);
 	uint32 all_new_size = new_size + 8;
+	if (all_new_size % 2 != 0) all_new_size++; //ensure it's multiple of 2
+
 	struct BlockElement* next_block_addr = (struct BlockElement*)(va + (block_size - 4) + 4);//the addr of the next block , are you sure about datatypes?
 	struct BlockElement* new_next_block_addr = (struct BlockElement*)(va + (all_new_size-4) + 4);//the addr of the next block after reallocation ,after header, are you sure about datatypes?
 
@@ -489,7 +492,6 @@ void *realloc_block_FF(void* va, uint32 new_size)
 				else {
 					//fragment
 					//check by nouran
-					//what if next next was also free -> fragment will be added to it
 					set_block_data(va, block_size+next_block_size,1);//will exist internal fragment (free unused mem in block)
 				}
 
@@ -537,7 +539,7 @@ void *realloc_block_FF(void* va, uint32 new_size)
 
 	}else if (all_new_size < block_size){
 		//shrinking the block and update the free block list
-		if (all_new_size % 2 != 0) all_new_size++; //ensure it's multiple of 2
+		//if (all_new_size % 2 != 0) all_new_size++; //ensure it's multiple of 2 ,,already in begin of the code
 		uint32 remainig_size = block_size-all_new_size;
 
 		//[4] Test realloc with decreased sizes
