@@ -121,6 +121,7 @@ void initialize_dynamic_allocator(uint32 daStart, uint32 initSizeOfAllocatedSpac
 
 	set_block_data(firstblock, initSizeOfAllocatedSpace - 8 ,0);
 
+	LIST_INIT(&freeBlocksList);
 	LIST_INSERT_HEAD(&freeBlocksList, firstblock);
 
 }
@@ -421,22 +422,26 @@ void free_block(void *va)
 void *realloc_block_FF(void* va, uint32 new_size)
 {
 		/*PLEASE NOTICE that new_size does not include meta data (header,footer) , shimaa*/
-	//[1] Test calling realloc with VA = NULL. It should call alloc
-	/* Try to allocate set of blocks with different sizes*/
-	/* Try to allocate a block with a size equal to the size of the first existing free block*/
-	if(va == NULL){
-		return alloc_block_FF(new_size);
-	}
 	//[2] Test realloc by passing size = 0. It should call free //return null
 	//test calling it with va & ZERO
+
 	if(new_size == 0 && va != NULL){
 		free_block(va);
 		return NULL;
 	}
 	//test calling it with NULL & ZERO
-	if(new_size == 0 && va != NULL){
-		return alloc_block_FF(0);
+	if(new_size == 0 && va == NULL){
+		return NULL;
 	}
+
+	//[1] Test calling realloc with VA = NULL. It should call alloc
+	/* Try to allocate set of blocks with different sizes*/
+	/* Try to allocate a block with a size equal to the size of the first existing free block*/
+
+	if(va == NULL){
+		return alloc_block_FF(new_size);
+	}
+
 
 
 
@@ -484,6 +489,7 @@ void *realloc_block_FF(void* va, uint32 new_size)
 				else {
 					//fragment
 					//check by nouran
+					//what if next next was also free -> fragment will be added to it
 					set_block_data(va, block_size+next_block_size,1);//will exist internal fragment (free unused mem in block)
 				}
 
