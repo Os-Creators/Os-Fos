@@ -90,8 +90,6 @@ bool is_initialized = 0;
 
 void initialize_dynamic_allocator(uint32 daStart, uint32 initSizeOfAllocatedSpace)
 {
-
-
 	//==================================================================================
 	//==================================================================================
 
@@ -135,20 +133,19 @@ void set_block_data(void* va, uint32 totalSize, bool isAllocated)
 	//COMMENT THE FOLLOWING LINE BEFORE START CODING
 	//panic("set_block_data is not implemented yet");
 
+	    if (totalSize < DYN_ALLOC_MIN_BLOCK_SIZE)
+	    {
+		  cprintf("The total size is not enough to set the data");
+		  return;
+	    }
 
-    if (totalSize < DYN_ALLOC_MIN_BLOCK_SIZE)
-    {
-	  cprintf("The total size is not enough to set the data");
-	  return;
-    }
-
-    uint32* header = (uint32*)(va-sizeof(int));
-    uint32* footer = (uint32*)(va+totalSize-(2*sizeof(int)));
+	    uint32* header = (uint32*)(va-sizeof(int));
+	    uint32* footer = (uint32*)(va+totalSize-(2*sizeof(int)));
 
 
-    uint32 Size_withAlloc = (totalSize & ~0x1) | (isAllocated ? 0x1 : 0x0);
+	    uint32 Size_withAlloc = (totalSize & ~0x1) | (isAllocated ? 0x1 : 0x0);
 
-    *(header) = *(footer) = Size_withAlloc;
+	    *(header) = *(footer) = Size_withAlloc;
 
 }
 
@@ -160,91 +157,93 @@ void set_block_data(void* va, uint32 totalSize, bool isAllocated)
 void *alloc_block_FF(uint32 size)
 {
 	//==================================================================================
-	//DON'T CHANGE THESE LINES==========================================================
-	//==================================================================================
-	{
-		if (size % 2 != 0) size++;	//ensure that the size is even (to use LSB as allocation flag)
-		if (size < DYN_ALLOC_MIN_BLOCK_SIZE)
-			size = DYN_ALLOC_MIN_BLOCK_SIZE ;
-		if (!is_initialized)
+		//DON'T CHANGE THESE LINES==========================================================
+		//==================================================================================
 		{
-			uint32 required_size = size + 2*sizeof(int) /*header & footer*/ + 2*sizeof(int) /*da begin & end*/ ;
-			uint32 da_start = (uint32)sbrk(ROUNDUP(required_size, PAGE_SIZE)/PAGE_SIZE);
-			uint32 da_break = (uint32)sbrk(0);
-			initialize_dynamic_allocator(da_start, da_break - da_start);
 
+			if (size % 2 != 0) size++;	//ensure that the size is even (to use LSB as allocation flag)
+			if (size < DYN_ALLOC_MIN_BLOCK_SIZE)
+				size = DYN_ALLOC_MIN_BLOCK_SIZE ;
+			if (!is_initialized)
+			{
+				uint32 required_size = size + 2*sizeof(int) /*header & footer*/ + 2*sizeof(int) /*da begin & end*/ ;
+				uint32 da_start = (uint32)sbrk(ROUNDUP(required_size, PAGE_SIZE)/PAGE_SIZE);
+				uint32 da_break = (uint32)sbrk(0);
+				initialize_dynamic_allocator(da_start, da_break - da_start);
+
+			}
+
+		//==================================================================================
+		//==================================================================================
+
+		//TODO: [PROJECT'24.MS1 - #06] [3] DYNAMIC ALLOCATOR - alloc_block_FF
+		//COMMENT THE FOLLOWING LINE BEFORE START CODING
+	    //panic("alloc_block_FF is not implemented yet");
+		//Your Code is Here...
+	    //2022170597
+
+		if (size == 0)
+		{
+		  return NULL;
 		}
-	}
-	//==================================================================================
-	//==================================================================================
+		struct BlockElement * mfirst597fitblock = NULL;
+		uint32 mfirst597fitblocksize;
+		uint32 size_needed_by_blocks = size + 2*sizeof(int);
+		struct BlockElement *now;
 
-	//TODO: [PROJECT'24.MS1 - #06] [3] DYNAMIC ALLOCATOR - alloc_block_FF
-	//COMMENT THE FOLLOWING LINE BEFORE START CODING
-    //panic("alloc_block_FF is not implemented yet");
-	//Your Code is Here...
-    //2022170597
+		LIST_FOREACH(now ,&freeBlocksList) {
+			uint32 mblocksize = get_block_size(now);
 
-	if (size == 0)
-	{
-	  return NULL;
-	}
-	struct BlockElement * mfirst597fitblock = NULL;
-	uint32 mfirst597fitblocksize;
-	uint32 size_needed_by_blocks = size + 2*sizeof(int);
-	struct BlockElement *now;
+			if (mblocksize >= size_needed_by_blocks) {
 
-	LIST_FOREACH(now ,&freeBlocksList) {
-		uint32 mblocksize = get_block_size(now);
+				mfirst597fitblock = now;
+				mfirst597fitblocksize = mblocksize;
+				break;
 
-		if (mblocksize >= size_needed_by_blocks) {
-
-			mfirst597fitblock = now;
-			mfirst597fitblocksize = mblocksize;
-			break;
-
-		}
-	}
-
-	if ( mfirst597fitblock == NULL) {
-
-		//see ROUNDUP -> sprk-----------------
-		mfirst597fitblock = (struct BlockElement *)sbrk(ROUNDUP(size_needed_by_blocks + sizeof( mfirst597fitblock), PAGE_SIZE));
-		if ( mfirst597fitblock == (void *)-1) {
-			return NULL;
+			}
 		}
 
-	   //*((uint32 *) mfirst597fitblock) = size_needed_by_blocks;
-		//mfirst597fitblock = (struct BlockElement *)((char *) mfirst597fitblock + sizeof(uint32));
-	} else {
-	   uint32 remaining_size = mfirst597fitblocksize - size_needed_by_blocks;
+		if ( mfirst597fitblock == NULL) {
 
-	   //we dont have to check if after me is empty or not , because it will never be (if it was it would be already merged before)
+			//see ROUNDUP -> sprk-----------------
+			mfirst597fitblock = (struct BlockElement *)sbrk(ROUNDUP(size_needed_by_blocks + sizeof( mfirst597fitblock), PAGE_SIZE));
+			if ( mfirst597fitblock == (void *)-1) {
+				return NULL;
+			}
 
-	   //block fits and have more
-	   if (remaining_size >= (DYN_ALLOC_MIN_BLOCK_SIZE + sizeof(uint32) + sizeof(uint32))/*16*/) {
-		   //no fragment
-		   struct BlockElement *new_block = (struct BlockElement *)((char *) mfirst597fitblock + size_needed_by_blocks);
+		   //*((uint32 *) mfirst597fitblock) = size_needed_by_blocks;
+			//mfirst597fitblock = (struct BlockElement *)((char *) mfirst597fitblock + sizeof(uint32));
+		} else {
+		   uint32 remaining_size = mfirst597fitblocksize - size_needed_by_blocks;
 
-		   set_block_data(new_block, remaining_size, 0);
+		   //we dont have to check if after me is empty or not , because it will never be (if it was it would be already merged before)
 
-		   //free_block(new_block);
-	       LIST_INSERT_AFTER(&freeBlocksList,mfirst597fitblock , new_block);
-	       LIST_REMOVE(&freeBlocksList, mfirst597fitblock);
+		   //block fits and have more
+		   if (remaining_size >= (DYN_ALLOC_MIN_BLOCK_SIZE + sizeof(uint32) + sizeof(uint32))/*16*/) {
+			   //no fragment
+			   struct BlockElement *new_block = (struct BlockElement *)((char *) mfirst597fitblock + size_needed_by_blocks);
 
+			   set_block_data(new_block, remaining_size, 0);
 
-	       set_block_data( mfirst597fitblock,size_needed_by_blocks,1);
-
-	   }else{
-		   //fragment
-		   set_block_data(mfirst597fitblock, mfirst597fitblocksize, 1);
-		   LIST_REMOVE(&freeBlocksList, mfirst597fitblock);
-	   }
+			   //free_block(new_block);
+		       LIST_INSERT_AFTER(&freeBlocksList,mfirst597fitblock , new_block);
+		       LIST_REMOVE(&freeBlocksList, mfirst597fitblock);
 
 
-	}
-	//cprintf("header in alloc. Actual addr H:%d H2:%p\n", *((uint32*)mfirst597fitblock-1), (uint32*)(mfirst597fitblock-4));
+		       set_block_data( mfirst597fitblock,size_needed_by_blocks,1);
 
-	return mfirst597fitblock;
+		   }else{
+			   //fragment
+			   set_block_data(mfirst597fitblock, mfirst597fitblocksize, 1);
+			   LIST_REMOVE(&freeBlocksList, mfirst597fitblock);
+		   }
+
+
+		}
+		//cprintf("header in alloc. Actual addr H:%d H2:%p\n", *((uint32*)mfirst597fitblock-1), (uint32*)(mfirst597fitblock-4));
+
+		return mfirst597fitblock;
+
 }
 //=========================================
 // [4] ALLOCATE BLOCK BY BEST FIT:
@@ -256,11 +255,10 @@ void *alloc_block_BF(uint32 size)
 	//panic("alloc_block_BF is not implemented yet");
 
 	//2022170629
-	struct BlockElement *mbestfitblock = NULL;
-	uint32 mbestfitblocksize = DYN_ALLOC_MAX_BLOCK_SIZE;
+
 
 	if (!is_initialized) {
-	        uint32 required_size = size + 2 * sizeof(uint32) + 2 * sizeof(uint32);
+	        uint32 required_size = size + 2 * sizeof(int) + 2 * sizeof(int);
 	        uint32 da_start = (uint32)sbrk(0);
 	        void *allocated_memory = sbrk(ROUNDUP(required_size, PAGE_SIZE));
 	        if (allocated_memory == (void *)-1) {
@@ -271,57 +269,60 @@ void *alloc_block_BF(uint32 size)
 
 	        is_initialized = 1;
 	    }
+
 	//2022170629
     if (size == 0){
     	return NULL;
     }
+
     if (size % 2 != 0) size++;
     		if (size < DYN_ALLOC_MIN_BLOCK_SIZE)
     			size = DYN_ALLOC_MIN_BLOCK_SIZE ;
-    uint32 size_needed_by_blocks = size + 2*sizeof(uint32);
+
+    uint32 size_needed_by_blocks = size + 2*sizeof(int);
 
     //2022170629
-
+    struct BlockElement *mbestfitblock = NULL;
+    uint32 mbestfitblocksize = UINT_MAX;
     struct BlockElement *now;
     LIST_FOREACH(now ,&freeBlocksList) {
-        uint32 mblocksize = sizeof(*now);
+    uint32 mblocksize = get_block_size(now);
 
-        if (mblocksize >= size_needed_by_blocks) {
-            if (mblocksize < mbestfitblocksize) {
-                mbestfitblock = now;
-                mbestfitblocksize = mblocksize;
-            }
-        }
+        if (mblocksize >= size_needed_by_blocks && mblocksize < mbestfitblocksize) {
+                   mbestfitblock = now;
+                   mbestfitblocksize = mblocksize;
+               }
     }
 
-    if (mbestfitblock == NULL) {
+    if (mbestfitblocksize == UINT_MAX) {
 
-        mbestfitblock = (struct BlockElement *)sbrk(ROUNDUP(size_needed_by_blocks + sizeof(mbestfitblock), PAGE_SIZE));
+    	//see ROUNDUP -> sbrk-----------------
+        mbestfitblock = (struct BlockElement *)sbrk(ROUNDUP(size_needed_by_blocks + mbestfitblocksize , PAGE_SIZE));
         if (mbestfitblock == (void *)-1) {
             return NULL;
         }
-        *((uint32 *)mbestfitblock) = size_needed_by_blocks;
-               mbestfitblock = (struct BlockElement *)((char *)mbestfitblock + sizeof(uint32));
+        set_block_data(mbestfitblock, size_needed_by_blocks, 1);
         } else {
-            uint32 remaining_size = mbestfitblocksize - size_needed_by_blocks;
+        	//block fits and have more
+        uint32 remaining_size = mbestfitblocksize - size_needed_by_blocks;
+        //we dont have to check if after me is empty or not , because it will never be (if it was it would be already merged before)
+         //block fits and have more
+         if (remaining_size >= (DYN_ALLOC_MIN_BLOCK_SIZE + sizeof(uint32) + sizeof(uint32))/*16*/) {
+        //no fragment
+         struct BlockElement *new_block = (struct BlockElement *)((char *) mbestfitblock + size_needed_by_blocks);
+         set_block_data(new_block, remaining_size, 0);
+         //free_block(new_block);
+        LIST_INSERT_AFTER(&freeBlocksList,mbestfitblock, new_block);
+        set_block_data( mbestfitblock,size_needed_by_blocks,1);
+        LIST_REMOVE(&freeBlocksList, mbestfitblock);
+        }else{
+          //fragment
+        set_block_data(mbestfitblock, mbestfitblocksize, 1);
+        LIST_REMOVE(&freeBlocksList, mbestfitblock);
+    }
+    }
 
-            if (remaining_size > 0)
-            {
-                if (remaining_size >= (DYN_ALLOC_MIN_BLOCK_SIZE + sizeof(uint32) + sizeof(uint32))) {
-                struct BlockElement *new_block = (struct BlockElement *)((char *)mbestfitblock + size_needed_by_blocks);
-                set_block_data(new_block, remaining_size, 0);
-                new_block->prev_next_info.le_next = mbestfitblock->prev_next_info.le_next;
-                if (new_block->prev_next_info.le_next != NULL) {
-                    new_block->prev_next_info.le_next->prev_next_info.le_prev = new_block;
-                }
-
-                mbestfitblock->prev_next_info.le_next = new_block;
-                new_block->prev_next_info.le_prev = mbestfitblock;
-             }
-            set_block_data(mbestfitblock,size_needed_by_blocks,1);
-        }
-        }
-   return 0;
+	return mbestfitblock;
 }
 
 //===================================================
@@ -329,7 +330,9 @@ void *alloc_block_BF(uint32 size)
 //===================================================
 void free_block(void *va)
 {
-	bool is_in_free_list(void* block){
+
+  bool is_in_free_list(void* block){
+
 		struct BlockElement* tmp_block;
 
 		LIST_FOREACH (tmp_block, &freeBlocksList){
@@ -411,8 +414,6 @@ void free_block(void *va)
 
 	}
 
-
-
 }
 
 
@@ -422,7 +423,8 @@ void free_block(void *va)
 //=========================================
 void *realloc_block_FF(void* va, uint32 new_size)
 {
-		/*PLEASE NOTICE that new_size does not include meta data (header,footer) , shimaa*/
+	/*PLEASE NOTICE that new_size does not include meta data (header,footer) , shimaa*/
+
 	//[2] Test realloc by passing size = 0. It should call free //return null
 	//test calling it with va & ZERO
 
@@ -576,8 +578,6 @@ void *realloc_block_FF(void* va, uint32 new_size)
 		//[6] realloc with the same size
 		return va;
 	}
-
-
 
 }
 
