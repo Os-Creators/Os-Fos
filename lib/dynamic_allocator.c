@@ -87,6 +87,7 @@ bool is_initialized = 0;
 //==================================
 // [1] INITIALIZE DYNAMIC ALLOCATOR:
 //==================================
+
 void initialize_dynamic_allocator(uint32 daStart, uint32 initSizeOfAllocatedSpace)
 {
 	//==================================================================================
@@ -123,14 +124,14 @@ void initialize_dynamic_allocator(uint32 daStart, uint32 initSizeOfAllocatedSpac
 
 }
 //==================================
-// [2] SET BLOCK  & FOOTER:
+// [2] SET BLOCK HEADER & FOOTER:
+//==================================
 //==================================
 void set_block_data(void* va, uint32 totalSize, bool isAllocated)
 {
 	//TODO: [PROJECT'24.MS1 - #05] [3] DYNAMIC ALLOCATOR - set_block_data
 	//COMMENT THE FOLLOWING LINE BEFORE START CODING
 	//panic("set_block_data is not implemented yet");
-
 
 	    if (totalSize < DYN_ALLOC_MIN_BLOCK_SIZE)
 	    {
@@ -149,6 +150,7 @@ void set_block_data(void* va, uint32 totalSize, bool isAllocated)
 }
 
 
+
 //=========================================
 // [3] ALLOCATE BLOCK BY FIRST FIT:
 //=========================================
@@ -158,6 +160,7 @@ void *alloc_block_FF(uint32 size)
 		//DON'T CHANGE THESE LINES==========================================================
 		//==================================================================================
 		{
+
 			if (size % 2 != 0) size++;	//ensure that the size is even (to use LSB as allocation flag)
 			if (size < DYN_ALLOC_MIN_BLOCK_SIZE)
 				size = DYN_ALLOC_MIN_BLOCK_SIZE ;
@@ -169,7 +172,7 @@ void *alloc_block_FF(uint32 size)
 				initialize_dynamic_allocator(da_start, da_break - da_start);
 
 			}
-		}
+
 		//==================================================================================
 		//==================================================================================
 
@@ -240,6 +243,7 @@ void *alloc_block_FF(uint32 size)
 		//cprintf("header in alloc. Actual addr H:%d H2:%p\n", *((uint32*)mfirst597fitblock-1), (uint32*)(mfirst597fitblock-4));
 
 		return mfirst597fitblock;
+
 }
 //=========================================
 // [4] ALLOCATE BLOCK BY BEST FIT:
@@ -326,7 +330,9 @@ void *alloc_block_BF(uint32 size)
 //===================================================
 void free_block(void *va)
 {
+
   bool is_in_free_list(void* block){
+
 		struct BlockElement* tmp_block;
 
 		LIST_FOREACH (tmp_block, &freeBlocksList){
@@ -407,7 +413,10 @@ void free_block(void *va)
 		LIST_REMOVE(&freeBlocksList, new_block);
 
 	}
+
 }
+
+
 
 //=========================================
 // [6] REALLOCATE BLOCK BY FIRST FIT:
@@ -415,6 +424,7 @@ void free_block(void *va)
 void *realloc_block_FF(void* va, uint32 new_size)
 {
 	/*PLEASE NOTICE that new_size does not include meta data (header,footer) , shimaa*/
+
 	//[2] Test realloc by passing size = 0. It should call free //return null
 	//test calling it with va & ZERO
 
@@ -569,7 +579,6 @@ void *realloc_block_FF(void* va, uint32 new_size)
 		return va;
 	}
 
-
 }
 
 /*********************************************************************************************/
@@ -581,7 +590,7 @@ void *realloc_block_FF(void* va, uint32 new_size)
 void *alloc_block_WF(uint32 size)
 {
 	panic("alloc_block_WF is not implemented yet");
-	return (void*) NULL;
+	return NULL;
 }
 
 //=========================================
@@ -590,5 +599,5 @@ void *alloc_block_WF(uint32 size)
 void *alloc_block_NF(uint32 size)
 {
 	panic("alloc_block_NF is not implemented yet");
-	return (void*) NULL;
+	return NULL;
 }

@@ -36,12 +36,14 @@ int check_block(void* va, void* expectedVA, uint32 expectedSize, uint8 expectedF
 		return 0;
 	}
 	//Check header & footer
-	uint32 header = *((uint32*)va-1);
+	uint32 header = *((uint32*)va-1);//notice that type convertion is before (-1) so we subtruct 1 unit from that type -> 4 byte (shimaa)
 	uint32 footer = *((uint32*)(va + expectedSize - 8));
 	uint32 expectedData = expectedSize | expectedFlag ;
 	if(header != expectedData || footer != expectedData)
 	{
 		cprintf("wrong header/footer data. Expected %d, Actual H:%d F:%d\n", expectedData, header, footer);
+		cprintf("wrong header/footer data. Expected addr %p, Actual addr H:%p H2:%p\n", (uint32*)expectedVA-1, (uint32*)va-1, (uint32*)(va-4));
+
 		return 0;
 	}
 	return 1;
@@ -624,6 +626,7 @@ void test_free_block_FF()
 		{
 			actualSize = allocSizes[i] - sizeOfMetaData;
 			va = startVAs[idx] = alloc_block(actualSize, DA_FF);
+
 			midVAs[idx] = va + actualSize/2 ;
 			endVAs[idx] = va + actualSize - sizeof(short);
 			//Check returned va
@@ -631,18 +634,26 @@ void test_free_block_FF()
 			if (check_block(va, expected_va, allocSizes[i], 1) == 0)
 				//			if(va != (curVA + sizeOfMetaData/2))
 				panic("test_free_block #1.%d: WRONG ALLOC - alloc_block_FF return wrong address. Expected %x, Actual %x", idx, expected_va ,va);
+
 			curVA += allocSizes[i] ;
 			*(startVAs[idx]) = idx ;
 			*(midVAs[idx]) = idx ;
 			*(endVAs[idx]) = idx ;
 			idx++;
+
+
 		}
+
 	}
 
 	//====================================================================//
 	/* Try to allocate a block with a size equal to the size of the first existing free block*/
 	actualSize = remainSize - sizeOfMetaData;
+	cprintf("before trap");
+
+	cprintf("expected free, %d , actual %u",*((uint32*)curVA),actualSize);
 	va = startVAs[idx] = alloc_block(actualSize, DA_FF);
+	cprintf("after trap");
 	midVAs[idx] = va + actualSize/2 ;
 	endVAs[idx] = va + actualSize - sizeof(short);
 	//Check returned va
@@ -679,7 +690,16 @@ void test_free_block_FF()
 	for (int i = 0; i < numOfAllocs; ++i)
 	{
 		cprintf("test#%d\n",i);
+		/*cprintf("size %d and %d\n",get_block_size(startVAs[i*allocCntPerSize]),allocSizes[i]);
+		cprintf("header before free. Actual addr H:%d H2:%p\n", *((uint32*)startVAs[i*allocCntPerSize]-1), (uint32*)(startVAs[i*allocCntPerSize]-4));
+		cprintf("BEG before free. %d is free? %d\n", *((uint32*)startVAs[i*allocCntPerSize]-2),is_free_block((uint32*)startVAs[i*allocCntPerSize]-2));
+		*/
 		free_block(startVAs[i*allocCntPerSize]);
+
+		/*cprintf("BEG after free. %d is free? %d\n", *((uint32*)startVAs[i*allocCntPerSize]-2),is_free_block((uint32*)startVAs[i*allocCntPerSize]-2));
+		cprintf("after free size %d and %d\n",get_block_size(startVAs[i*allocCntPerSize]),allocSizes[i]);
+		*/
+
 		if (check_block(startVAs[i*allocCntPerSize], startVAs[i*allocCntPerSize], allocSizes[i], 0) == 0)
 		{
 			is_correct = 0;
