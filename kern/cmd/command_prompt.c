@@ -455,49 +455,50 @@ int execute_command(char *command_string)
 
 int process_command(int number_of_arguments, char** arguments)
 {
-   int command_found=0;
-     int command_matched=0;
-   int actual_number_of_arguments=number_of_arguments-1; // without command name
+	//2022170473
+   int MKcommand_found473=0;
+   int MKcommand_matched473=0;
+   int MKactual_number_of_arguments473=number_of_arguments-1; // without command name
    LIST_INIT(&foundCommands);
-
+   //2022170473
     for (int i = 0; i < NUM_OF_COMMANDS; i++)
     {
       if (strcmp(arguments[0], commands[i].name) == 0) //found
       {
-        command_found=1;
+    	 MKcommand_found473=1;
         if(commands[i].num_of_args==-1)
         {
-          if(actual_number_of_arguments>=1)
+          if(MKactual_number_of_arguments473>=1)
           {
              return i;
           }
         }
         else
         {
-          if(actual_number_of_arguments==commands[i].num_of_args)
+          if(MKactual_number_of_arguments473==commands[i].num_of_args)
           {
              return i;
           }
         }
-
+        //2022170473
         LIST_INIT(&foundCommands);
         LIST_INSERT_HEAD(&foundCommands,&commands[i]); //inavlid nunmber of arguments
         return CMD_INV_NUM_ARGS;
       }
          else
        {
-           char *command_name=commands[i].name;
-           char *argument_name=arguments[0];
-           int command_size=strlen(command_name);
-           int argument_size=strlen(argument_name);
+           char *MKcommand_name473=commands[i].name;
+           char *MKargument_name473=arguments[0];
+           int MKcommand_size473=strlen(MKcommand_name473);
+           int MKargument_size473=strlen(MKargument_name473);
              int j=0;
              int k=0;
-              for(j=0;j<argument_size;j++)
+              for(j=0;j<MKargument_size473;j++)
             {
                int char_found=0;
-               for(;k<command_size;k++)
+               for(;k<MKcommand_size473;k++)
                  {
-                   if(argument_name[j]==command_name[k])
+                   if(MKargument_name473[j]==MKcommand_name473[k])
                  {
                     char_found=1;
                    k++;
@@ -507,19 +508,19 @@ int process_command(int number_of_arguments, char** arguments)
                if(char_found==0) break;
             }
 
-            if(j==argument_size) //found all characters
+            if(j==MKargument_size473) //found all characters
               {
                LIST_INSERT_TAIL(&foundCommands,&commands[i]);
-               command_matched=1;
+               MKcommand_matched473=1;
             }
         }
       }
-
-     if(command_matched)
+    //2022170473
+     if(MKcommand_matched473)
      {
       return CMD_MATCHED;
      }
 
-
+     //2022170473
   return CMD_INVALID;
 }

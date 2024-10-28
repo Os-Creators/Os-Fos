@@ -33,18 +33,20 @@ void sleep(struct Channel *chan, struct spinlock* lk)
 	//panic("sleep is not implemented yet");
 	//Your Code is Here...
 
-	struct Env* curr_env=get_cpu_proc();
+	//2022170473
+	struct Env* NHcurr_env473=get_cpu_proc();
 
+	//2022170473
 	if(holding_spinlock(&ProcessQueues.qlock)==0) acquire_spinlock(&ProcessQueues.qlock);
 
         if(holding_spinlock(lk)==1) release_spinlock(lk); // guard //2022170473
 
-    	curr_env->env_status = ENV_BLOCKED;//2022170473
-    	enqueue(&(chan->queue),curr_env);//2022170473
+        NHcurr_env473->env_status = ENV_BLOCKED;//2022170473
+    	enqueue(&(chan->queue),NHcurr_env473);//2022170473
 
     	sched();//2022170473
 
-        while(curr_env != get_cpu_proc());//2022170473
+        while(NHcurr_env473 != get_cpu_proc());//2022170473
         if(holding_spinlock(lk)==0) acquire_spinlock(lk);//2022170473
 
     if(holding_spinlock(&ProcessQueues.qlock)==1) release_spinlock(&ProcessQueues.qlock);
@@ -64,12 +66,13 @@ void wakeup_one(struct Channel *chan)
 	//COMMENT THE FOLLOWING LINE BEFORE START CODING
 	//panic("wakeup_one is not implemented yet");
 
+	//2022170629
 	if(holding_spinlock(&ProcessQueues.qlock)==0) acquire_spinlock(&ProcessQueues.qlock);
 
-    struct Env *Mays_waked_process = dequeue(&(chan->queue));//2022170473
-    if(Mays_waked_process!=NULL)//2022170473
+    struct Env *Mays_waked_process629 = dequeue(&(chan->queue));//2022170629
+    if(Mays_waked_process629!=NULL)//2022170629
     {
-    	sched_insert_ready0(Mays_waked_process);//2022170473
+    	sched_insert_ready0(Mays_waked_process629);//2022170629
     }
 
     if(holding_spinlock(&ProcessQueues.qlock)==1) release_spinlock(&ProcessQueues.qlock);
@@ -91,10 +94,11 @@ void wakeup_all(struct Channel *chan)
 	//panic("wakeup_all is not implemented yet");
 	//Your Code is Here...
 
+	//202210213 do a while loop on wakeup_one for the all function
 	while (LIST_LAST(&(chan->queue))!=NULL)//202210213
 	{
 	   wakeup_one(chan);//202210213
-	}//2022170473
+	}//202210213
 
 }
 
