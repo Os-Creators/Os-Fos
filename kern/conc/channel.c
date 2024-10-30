@@ -46,7 +46,7 @@ void sleep(struct Channel *chan, struct spinlock* lk)
 
     	sched();//2022170473
 
-        while(NHcurr_env473 != get_cpu_proc());//2022170473
+       // while(NHcurr_env473 != get_cpu_proc());//2022170473
         if(holding_spinlock(lk)==0) acquire_spinlock(lk);//2022170473
 
     if(holding_spinlock(&ProcessQueues.qlock)==1) release_spinlock(&ProcessQueues.qlock);
