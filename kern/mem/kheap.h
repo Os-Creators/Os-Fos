@@ -7,6 +7,10 @@
 
 #include <inc/types.h>
 
+unsigned int start;
+//unsigned int end;
+unsigned int hardlimit;
+unsigned int segment_break;
 
 /*2017*/
 uint32 _KHeapPlacementStrategy;
