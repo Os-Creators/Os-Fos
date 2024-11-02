@@ -148,9 +148,41 @@ void fault_handler(struct Trapframe *tf)
 		if (userTrap)
 		{
 			/*============================================================================================*/
-			//[PROJECT'24.MS2] [3] PAGE FAULT HANDLER - Check for invalid pointers
+			//TODO: [PROJECT'24.MS2 - #08] [2] FAULT HANDLER I - Check for invalid pointers
 			//(e.g. pointing to unmarked user heap page, kernel or wrong access rights),
 			//your code is here
+
+
+
+//			 pointing to UNMARKED page in user heap
+//			 pointing to kernel
+//			Exist (present) but with read-only permissions  // env_exit()
+
+       // inline uint32 pt_get_page_permissions(struct Env* ptr_env, uint32 virtual_address )
+	  // ptr_env: pointer to environment that you should work on
+
+
+
+   //uint32 *page_directory=last_faulted_env->env_page_directory; // check it if given
+   int permissions= pt_get_page_permissions(ptr_page_directory,fault_va);
+   int user_access= permissions & PERM_USER;
+   int marked_page= permissions & PERM_AVAILABLE;
+   int Read_access= permissions & PERM_WRITEABLE;
+
+
+   if(user_access!=PERM_USER) // check type
+   {
+      env_exit();
+   }
+   if(marked_page!=PERM_AVAILABLE) // unmarked
+   {
+     env_exit();
+   }
+
+   if(Read_access!=PERM_WRITEABLE) // read
+   {
+     env_exit();
+   }
 
 			/*============================================================================================*/
 		}
@@ -214,10 +246,6 @@ void table_fault_handler(struct Env * curenv, uint32 fault_va)
 //=========================
 void page_fault_handler(struct Env * faulted_env, uint32 fault_va)
 {
-	//[PROJECT'24] [3] PAGE FAULT HANDLER
-	// Write your code here, remove the panic and write your code
-	panic("page_fault_handler() is not implemented yet...!!");
-
 #if USE_KHEAP
 		struct WorkingSetElement *victimWSElement = NULL;
 		uint32 wsSize = LIST_SIZE(&(faulted_env->page_WS_list));
@@ -229,7 +257,7 @@ void page_fault_handler(struct Env * faulted_env, uint32 fault_va)
 	if(wsSize < (faulted_env->page_WS_max_size))
 	{
 		//cprintf("PLACEMENT=========================WS Size = %d\n", wsSize );
-		//[PROJECT'24.MS2 - #15] [3] PAGE FAULT HANDLER - Placement
+		//TODO: [PROJECT'24.MS2 - #09] [2] FAULT HANDLER I - Placement
 		// Write your code here, remove the panic and write your code
 		panic("page_fault_handler().PLACEMENT is not implemented yet...!!");
 
@@ -239,7 +267,7 @@ void page_fault_handler(struct Env * faulted_env, uint32 fault_va)
 	{
 		//cprintf("REPLACEMENT=========================WS Size = %d\n", wsSize );
 		//refer to the project presentation and documentation for details
-		//[PROJECT'24.MS3] [1] PAGE FAULT HANDLER - Replacement
+		//TODO: [PROJECT'24.MS3] [2] FAULT HANDLER II - Replacement
 		// Write your code here, remove the panic and write your code
 		panic("page_fault_handler() Replacement is not implemented yet...!!");
 	}

@@ -7,7 +7,10 @@
 
 #include <inc/types.h>
 
-
+unsigned int start;
+//unsigned int end;
+unsigned int hardlimit;
+unsigned int segment_break;
 /*2017*/
 uint32 _KHeapPlacementStrategy;
 //Values for user heap placement strategy
@@ -41,7 +44,7 @@ unsigned int kheap_physical_address(unsigned int virtual_address);
 int numOfKheapVACalls ;
 
 
-//[PROJECT'24.MS2] add suitable code here
+//TODO: [PROJECT'24.MS2 - #01] [1] KERNEL HEAP - add suitable code here
 
 
 #endif // FOS_KERN_KHEAP_H_
