@@ -14,7 +14,39 @@ int initialize_kheap_dynamic_allocator(uint32 daStart, uint32 initSizeToAllocate
 {
 	//[PROJECT'24.MS2] [USER HEAP - KERNEL SIDE] initialize_kheap_dynamic_allocator
 	// Write your code here, remove the panic and write your code
-	panic("initialize_kheap_dynamic_allocator() is not implemented yet...!!");
+	//panic("initialize_kheap_dynamic_allocator() is not implemented yet...!!");
+	 start=daStart;
+		hardlimit=daLimit;
+		segment_break=daStart+initSizeToAllocate;
+		if(segment_break>hardlimit){
+			return E_NO_MEM;
+		}
+		uint32 num_pages;
+		uint32 page_address=start;
+		uint32 *ptr_page_table = NULL;
+		struct FrameInfo **ptr_frame_info;
+		//struct FrameInfo *pointer_frame_info;
+		//num_pages=(segment_break-start)/PAGE_SIZE;
+		uint32 check_allocations = 0;
+		num_pages = ROUNDUP(initSizeToAllocate, PAGE_SIZE); num_pages /= PAGE_SIZE ;
+  while(num_pages--){
+
+// ptr_page_table=get_page_table(*ptr_page_directory, page_address,&ptr_page_table);
+
+ struct FrameInfo *ptr_frame_info=get_frame_info(*ptr_page_directory,page_address,&ptr_page_table);
+
+ allocate_frame(&ptr_frame_info);
+
+ map_frame(uint32 *ptr_page_directory,*ptr_frame_info,page_address, PERM_USER | PERM_PRESENT | PERM_WRITEABLE );
+ page_address += PAGE_SIZE;
+  check_allocations ++;
+		}
+initialize_dynamic_allocator( daStart,initSizeToAllocate);
+
+   if(check_allocations==num_pages){
+	return 0;
+    }
+    return E_NO_MEM;
 }
 
 void* sbrk(int numOfPages)
@@ -30,12 +62,26 @@ void* sbrk(int numOfPages)
 	 */
 
 	//MS2: COMMENT THIS LINE BEFORE START CODING====
+	uint32 previous_break = segment_break;
+		if (numOfPages == 0 )
+		{
+			return (void*) segment_break;
+	//		cprintf("\nsegment_break = %u\n",segment_break);
+
+		}
+		else if(numOfPages>0){
+			   segment_break += numOfPages * PAGE_SIZE;
+			   //allocate and mapped
+
+			   return (void*)previous_break;
+		}
+
 	return (void*)-1 ;
 	//====================================================
 
 	//[PROJECT'24.MS2] Implement this function
 	// Write your code here, remove the panic and write your code
-	panic("sbrk() is not implemented yet...!!");
+	//panic("sbrk() is not implemented yet...!!");
 }
 
 
