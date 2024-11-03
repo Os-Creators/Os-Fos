@@ -6,6 +6,7 @@
 #endif
 
 #include <inc/types.h>
+#include <inc/queue.h>
 
 unsigned int start;
 //unsigned int end;
@@ -46,6 +47,38 @@ int numOfKheapVACalls ;
 
 
 //[PROJECT'24.MS2] add suitable code here
+
+LIST_HEAD(PageInfo_List, PageInfo);
+typedef LIST_ENTRY(PageInfo) Free_page_LIST_entry_t;
+struct PageInfo {
+	uint32 va;    // data type?
+	Free_page_LIST_entry_t prev_next_info;
+};
+
+struct PageInfo_List free_Page_list;
+
+
+
+
+
+//LIST_HEAD(FrameInfo_List, FrameInfo);
+//typedef LIST_ENTRY(FrameInfo) Page_LIST_entry_t;
+//
+//struct FrameInfo {
+//	/* free list link */
+//	Page_LIST_entry_t prev_next_info;
+//
+//	// references is the count of pointers (usually in page table entries)
+//	// to this page, for frames allocated using allocate_frame.
+//	// frames allocated at boot time using memory_manager.c's
+//	// boot_allocate_space do not have valid reference count fields.
+//	uint16 references;
+//
+//	struct Env *proc;
+//	uint32 bufferedVA;
+//	unsigned char isBuffered;
+//};
+//struct FrameInfo_List free_frame_list;
 
 
 #endif // FOS_KERN_KHEAP_H_
