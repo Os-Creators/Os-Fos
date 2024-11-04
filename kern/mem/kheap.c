@@ -23,7 +23,7 @@ int initialize_kheap_dynamic_allocator(uint32 daStart, uint32 initSizeToAllocate
             }
             uint32 num_pages;
             uint32 page_address=start;
-            uint32 ptr_page_table = NULL;
+            uint32* ptr_page_table = NULL;
             struct FrameInfo **ptr_frame_info;
             //struct FrameInfopointer_frame_info;
             //num_pages=(segment_break-start)/PAGE_SIZE;
@@ -33,8 +33,7 @@ int initialize_kheap_dynamic_allocator(uint32 daStart, uint32 initSizeToAllocate
 
     // ptr_page_table=get_page_table(ptr_page_directory, page_address,&ptr_page_table);
 
-     struct FrameInfoptr_frame_info=get_frame_info(ptr_page_directory,page_address,&ptr_page_table);
-
+     struct FrameInfo* ptr_frame_info=get_frame_info(ptr_page_directory,page_address,&ptr_page_table);;
      allocate_frame(&ptr_frame_info);
 
      map_frame(ptr_page_directory,ptr_frame_info,page_address, PERM_USER | PERM_PRESENT | PERM_WRITEABLE );
