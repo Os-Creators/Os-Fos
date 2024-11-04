@@ -16,6 +16,7 @@ int initialize_kheap_dynamic_allocator(uint32 daStart, uint32 initSizeToAllocate
     // Write your code here, remove the panic and write your code
     //panic("initialize_kheap_dynamic_allocator() is not implemented yet...!!");
      start=daStart;
+<<<<<<< HEAD
 		hardlimit=daLimit;
 		segment_break=daStart+initSizeToAllocate;
 		if(segment_break>hardlimit){
@@ -35,6 +36,26 @@ int initialize_kheap_dynamic_allocator(uint32 daStart, uint32 initSizeToAllocate
 
      struct FrameInfo* ptr_frame_info=get_frame_info(ptr_page_directory,page_address,&ptr_page_table);
 
+=======
+            hardlimit=daLimit;
+            segment_break=daStart+initSizeToAllocate;
+            if(segment_break>hardlimit){
+                return E_NO_MEM;
+            }
+            uint32 num_pages;
+            uint32 page_address=start;
+            uint32* ptr_page_table = NULL;
+            struct FrameInfo **ptr_frame_info;
+            //struct FrameInfopointer_frame_info;
+            //num_pages=(segment_break-start)/PAGE_SIZE;
+            uint32 check_allocations = 0;
+            num_pages = ROUNDUP(initSizeToAllocate, PAGE_SIZE); num_pages /= PAGE_SIZE ;
+      while(num_pages--){
+
+    // ptr_page_table=get_page_table(ptr_page_directory, page_address,&ptr_page_table);
+
+     struct FrameInfo* ptr_frame_info=get_frame_info(ptr_page_directory,page_address,&ptr_page_table);;
+>>>>>>> ac2976445aaab7bad8b9a9dd021a09b29e8df1b3
      allocate_frame(&ptr_frame_info);
 
      map_frame(ptr_page_directory,ptr_frame_info,page_address, PERM_USER | PERM_PRESENT | PERM_WRITEABLE );
