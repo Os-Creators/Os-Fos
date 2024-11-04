@@ -51,34 +51,21 @@ int numOfKheapVACalls ;
 LIST_HEAD(PageInfo_List, PageInfo);
 typedef LIST_ENTRY(PageInfo) Free_page_LIST_entry_t;
 struct PageInfo {
-	uint32 va;    // data type?
+	uint32 start_page_va;    // data type?
+	uint32 end_page_va;
+	uint32 number_of_pages;
 	Free_page_LIST_entry_t prev_next_info;
 };
 
 struct PageInfo_List free_Page_list;
 
+uint32 max_merged_pages_size;
 
 
-
-
-//LIST_HEAD(FrameInfo_List, FrameInfo);
-//typedef LIST_ENTRY(FrameInfo) Page_LIST_entry_t;
-//
-//struct FrameInfo {
-//	/* free list link */
-//	Page_LIST_entry_t prev_next_info;
-//
-//	// references is the count of pointers (usually in page table entries)
-//	// to this page, for frames allocated using allocate_frame.
-//	// frames allocated at boot time using memory_manager.c's
-//	// boot_allocate_space do not have valid reference count fields.
-//	uint16 references;
-//
-//	struct Env *proc;
-//	uint32 bufferedVA;
-//	unsigned char isBuffered;
-//};
-//struct FrameInfo_List free_frame_list;
+//=================================================================================//
+//============================== OUR HELPER FUNCTIONS ===================================//
+//=================================================================================//
+int allocate_page_to_frame(struct PageInfo * page_VA);
 
 
 #endif // FOS_KERN_KHEAP_H_

@@ -16,45 +16,63 @@ int initialize_kheap_dynamic_allocator(uint32 daStart, uint32 initSizeToAllocate
     // Write your code here, remove the panic and write your code
     //panic("initialize_kheap_dynamic_allocator() is not implemented yet...!!");
      start=daStart;
-            hardlimit=daLimit;
-            segment_break=daStart+initSizeToAllocate;
-            if(segment_break>hardlimit){
-                return E_NO_MEM;
-            }
-            uint32 num_pages;
-            uint32 page_address=start;
-            uint32 ptr_page_table = NULL;
-            struct FrameInfo **ptr_frame_info;
-            //struct FrameInfopointer_frame_info;
-            //num_pages=(segment_break-start)/PAGE_SIZE;
-            uint32 check_allocations = 0;
-            num_pages = ROUNDUP(initSizeToAllocate, PAGE_SIZE); num_pages /= PAGE_SIZE ;
-      while(num_pages--){
+		hardlimit=daLimit;
+		segment_break=daStart+initSizeToAllocate;
+		if(segment_break>hardlimit){
+			return E_NO_MEM;
+		}
+		uint32 num_pages;
+		uint32 page_address=start;
+		uint32* ptr_page_table = NULL;
+		struct FrameInfo **ptr_frame_info;
+		//struct FrameInfopointer_frame_info;
+		//num_pages=(segment_break-start)/PAGE_SIZE;
+		uint32 check_allocations = 0;
+		num_pages = ROUNDUP(initSizeToAllocate, PAGE_SIZE); num_pages /= PAGE_SIZE ;
+		while(num_pages--){
 
     // ptr_page_table=get_page_table(ptr_page_directory, page_address,&ptr_page_table);
 
-     struct FrameInfoptr_frame_info=get_frame_info(ptr_page_directory,page_address,&ptr_page_table);
+     struct FrameInfo* ptr_frame_info=get_frame_info(ptr_page_directory,page_address,&ptr_page_table);
 
      allocate_frame(&ptr_frame_info);
 
      map_frame(ptr_page_directory,ptr_frame_info,page_address, PERM_USER | PERM_PRESENT | PERM_WRITEABLE );
-     page_address += PAGE_SIZE;
-      check_allocations ++;
-            }
+		 page_address += PAGE_SIZE;
+		  check_allocations ++;
+	 }
     initialize_dynamic_allocator( daStart,initSizeToAllocate);
+    //page_allocator ----------------------------------------------
 
-       if(check_allocations==num_pages){
-        return 0;
-        }
+	struct PageInfo* page_allocator = (struct PageInfo*)((char*)hardlimit+PAGE_SIZE);//any thing to not making it null
+
+	//check for not found frame in the next code
+	struct FrameInfo* ptr_frame_info2=get_frame_info(ptr_page_directory,hardlimit+PAGE_SIZE,&ptr_page_table);
+	allocate_frame(&ptr_frame_info2);
+	map_frame(ptr_page_directory,ptr_frame_info2,hardlimit+PAGE_SIZE, PERM_AVAILABLE|PERM_USER | PERM_WRITEABLE );
+	//---
+
+	//initialize data
+	page_allocator -> start_page_va = (uint32)((char*)hardlimit + PAGE_SIZE);
+	page_allocator -> end_page_va = KERNEL_HEAP_MAX - PAGE_SIZE; //beginning of last page
+	page_allocator -> number_of_pages = (KERNEL_HEAP_MAX / PAGE_SIZE);
+	max_merged_pages_size = (KERNEL_HEAP_MAX / PAGE_SIZE);
+
+	LIST_INSERT_HEAD(&free_Page_list,page_allocator);
+
+	//------------------------------------------------------------
+
+	//cprintf("in initialize list size %d,first element size %d",LIST_SIZE(&free_Page_list),LIST_FIRST(&free_Page_list)->number_of_pages);
+
+	if(check_allocations==num_pages){
+	   return 0;
+	}
+
+
         return E_NO_MEM;
-//           char* start_addr= (char*)(hardlimit + PAGE_SIZE);
-//
-//            while(start_addr!= KERNEL_HEAP_MAX)
-//            {
-//            	LIST_INSERT_TAIL(&free_Page_list,(struct PageInfo*)start_addr);  //might get exception
-//            	start_addr+=PAGE_SIZE;
-//            }
-//
+
+
+
 
 }
 
@@ -71,7 +89,7 @@ void* sbrk(int numOfPages)
 	 */
 
 	//MS2: COMMENT THIS LINE BEFORE START CODING====
-	uint32 previous_break = segment_break;
+	/*uint32 previous_break = segment_break;
 		if (numOfPages == 0 )
 		{
 			return (void*) segment_break;
@@ -83,7 +101,7 @@ void* sbrk(int numOfPages)
 			   //allocate and mapped
 
 			   return (void*)previous_break;
-		}
+		}*/
 
 	return (void*)-1 ;
 	//====================================================
@@ -98,10 +116,47 @@ void* kmalloc(unsigned int size)
 {
 	//[PROJECT'24.MS2] Implement this function
 	// Write your code here, remove the panic and write your code
-	kpanic_into_prompt("kmalloc() is not implemented yet...!!");
+	//kpanic_into_prompt("kmalloc() is not implemented yet...!!");
+
+	if(size <= DYN_ALLOC_MAX_BLOCK_SIZE)
+		return alloc_block_FF(size);
 
 	// use "isKHeapPlacementStrategyFIRSTFIT() ..." functions to check the current strategy
+	if(isKHeapPlacementStrategyFIRSTFIT() != 1){
+		panic("the strategy is not first fit");
+	}
+	//cprintf("in initialize list size %d,first element size %d",LIST_SIZE(&free_Page_list),LIST_FIRST(&free_Page_list)->number_of_pages);
 
+	uint32 num_of_pages = ROUNDUP(size / PAGE_SIZE, PAGE_SIZE);
+	struct PageInfo* page_VA;
+
+	if(max_merged_pages_size >= num_of_pages){
+
+		//see first element that fits all size
+		LIST_FOREACH(page_VA, &(free_Page_list))
+		{
+			if( (page_VA -> number_of_pages) >= num_of_pages){
+				while(num_of_pages--){
+					if(allocate_page_to_frame(page_VA) != 0)return NULL;
+					page_VA = (struct PageInfo*)((char*)page_VA +PAGE_SIZE);
+				}
+				break;
+			}
+		}
+
+		//removing from the list
+		if(page_VA -> number_of_pages == num_of_pages)
+			LIST_REMOVE(&free_Page_list, page_VA);
+		else{
+			page_VA -> number_of_pages -= num_of_pages;
+			page_VA -> start_page_va = (uint32) (char*)(page_VA ->start_page_va)+(num_of_pages * PAGE_SIZE);
+		}
+
+		return page_VA;
+	}else{
+		return NULL;
+	}
+	//check data in the list (for realloc)
 }
 
 void kfree(void* virtual_address)
@@ -159,4 +214,35 @@ void *krealloc(void *virtual_address, uint32 new_size)
 	// Write your code here, remove the panic and write your code
 	return NULL;
 	panic("krealloc() is not implemented yet...!!");
+}
+
+//=================================================================================//
+//============================== OUR HELPER FUNCTIONS ===================================//
+//=================================================================================//
+
+int allocate_page_to_frame(struct PageInfo * page_VA){
+	//[1] Check if the page exists or not?
+	uint32 *ptr_table = NULL;
+	struct FrameInfo* ptr_frame_info = get_frame_info(ptr_page_directory, (uint32)page_VA, &ptr_table);
+	if (ptr_frame_info != NULL) return 0;
+
+	//[2] Allocate new frame
+	int ret = allocate_frame(&ptr_frame_info) ;
+	if (ptr_frame_info == NULL || ret != 0) {
+		cprintf("No enough memory for page itself!\n");
+		return -1;
+	}
+
+	//[3] Map the given va to the allocated frame
+	//check perms
+	ret = map_frame(ptr_page_directory, ptr_frame_info, (uint32)page_VA, PERM_USER|PERM_WRITEABLE|PERM_PRESENT);
+	if (ret != 0) {
+		cprintf("No enough memory for page table!\n"); //free the allocated frame
+		free_frame(ptr_frame_info) ;
+		return -1;
+	}
+	return 0 ;
+
+
+
 }
