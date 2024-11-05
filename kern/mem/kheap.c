@@ -13,70 +13,62 @@
 int initialize_kheap_dynamic_allocator(uint32 daStart, uint32 initSizeToAllocate, uint32 daLimit)
 {
     //TODO: [PROJECT'24.MS2 - #01] [1] KERNEL HEAP - initialize_kheap_dynamic_allocator
-    // Write your code here, remove the panic and write your code
-    //panic("initialize_kheap_dynamic_allocator() is not implemented yet...!!");
-     start=daStart;
 
-		hardlimit=daLimit;
-		segment_break=daStart+initSizeToAllocate;
-		if(segment_break>hardlimit){
-			return E_NO_MEM;
-		}
-		uint32 num_pages;
-		uint32 page_address=start;
-		uint32* ptr_page_table = NULL;
-		struct FrameInfo **ptr_frame_info;
-		//struct FrameInfopointer_frame_info;
-		//num_pages=(segment_break-start)/PAGE_SIZE;
-		uint32 check_allocations = 0;
-		num_pages = ROUNDUP(initSizeToAllocate, PAGE_SIZE); num_pages /= PAGE_SIZE ;
-		while(num_pages--){
+    uint32* start=(uint32*)daStart;
 
-    // ptr_page_table=get_page_table(ptr_page_directory, page_address,&ptr_page_table);
+    uint32*  hardlimit=(uint32*)daLimit;
 
-     struct FrameInfo* ptr_frame_info=get_frame_info(ptr_page_directory,page_address,&ptr_page_table);
+    uint32* segment_break=(uint32*)daStart+initSizeToAllocate;
+
+            if ( start >hardlimit){
+            	//return E_NO_MEM ;
+            	panic("exced the limit...!!");
+
+            }
 
 
-     allocate_frame(&ptr_frame_info);
+            if(segment_break>hardlimit){
+               // return E_NO_MEM;
+            	panic("exced the limit...!!");
+            }
+            uint32 num_pages;
+           // uint32 page_address=start;
+           // uint32 ptr_page_table = NULL;
+            struct FrameInfo **ptr_frame_info;
 
-     map_frame(ptr_page_directory,ptr_frame_info,page_address, PERM_USER | PERM_PRESENT | PERM_WRITEABLE );
-		 page_address += PAGE_SIZE;
-		  check_allocations ++;
-	 }
+           // uint32 check_allocations = 0;
+
+   //  num_pages = ROUNDUP(initSizeToAllocate, PAGE_SIZE); num_pages /= PAGE_SIZE ;
+
+     if(start>(uint32*)KERNEL_HEAP_START &&segment_break<hardlimit ){
+
+      while(start<segment_break){
+
+    struct FrameInfo *ptr_frame_info;
+
+      allocate_frame(&ptr_frame_info);
+
+ //map_frame(ptr_page_directory,ptr_frame_info,ptr_frame_info->bufferedVA+=PAGE_SIZE,PERM_USER | PERM_PRESENT);
+ int retur=map_frame(ptr_page_directory,ptr_frame_info,(uint32) start,PERM_USER | PERM_PRESENT);
+
+    if((uint32*)retur==NULL){
+
+      return E_NO_MEM;
+
+       }
+      start += PAGE_SIZE;
+
+     // check_allocations ++;
+               }
+          }
     initialize_dynamic_allocator( daStart,initSizeToAllocate);
-    //page_allocator ----------------------------------------------
 
-	struct PageInfo* page_allocator = (struct PageInfo*)((char*)hardlimit+PAGE_SIZE);//any thing to not making it null
-
-	//check for not found frame in the next code
-	struct FrameInfo* ptr_frame_info2=get_frame_info(ptr_page_directory,hardlimit+PAGE_SIZE,&ptr_page_table);
-	allocate_frame(&ptr_frame_info2);
-	map_frame(ptr_page_directory,ptr_frame_info2,hardlimit+PAGE_SIZE, PERM_AVAILABLE|PERM_USER | PERM_WRITEABLE );
-	//---
-
-	//initialize data
-	page_allocator -> start_page_va = (uint32)((char*)hardlimit + PAGE_SIZE);
-	page_allocator -> end_page_va = KERNEL_HEAP_MAX - PAGE_SIZE; //beginning of last page
-	page_allocator -> number_of_pages = (KERNEL_HEAP_MAX / PAGE_SIZE);
-	max_merged_pages_size = (KERNEL_HEAP_MAX / PAGE_SIZE);
-
-	LIST_INSERT_HEAD(&free_Page_list,page_allocator);
-
-	//------------------------------------------------------------
-
-	//cprintf("in initialize list size %d,first element size %d",LIST_SIZE(&free_Page_list),LIST_FIRST(&free_Page_list)->number_of_pages);
-
-	if(check_allocations==num_pages){
-	   return 0;
-	}
-
-
-        return E_NO_MEM;
-
-
-
-
+//       if(check_allocations==num_pages){
+//        return 0;
+//        }
+       return 0;
 }
+
 
 void* sbrk(int numOfPages)
 {
@@ -87,31 +79,74 @@ void* sbrk(int numOfPages)
 	 *
 	 * NOTES:
 	 * 	1) Allocating additional pages for a kernel dynamic allocator will fail if the free frames are exhausted
-	 * 		or the break exceed the limit of the dynamic allocator. If sbrk fails, kernel should panic(...)
+	 * 		or the break exceed the limit of the dynamic allocator. If sbrk fails, return -1
 	 */
 
-	//MS2: COMMENT THIS LINE BEFORE START CODING====
-	/*uint32 previous_break = segment_break;
+	//MS2: COMMENT THIS LINE BEFORE START CODING==========
+	//return (void*)-1 ;
+	//====================================================
+
+	//TODO: [PROJECT'24.MS2 - #02] [1] KERNEL HEAP - sbrk
+	// Write your code here, remove the panic and write your code
+	//panic("sbrk() is not implemented yet...!!");
+	uint32 previous_break = segment_break;
 		if (numOfPages == 0 )
 		{
 			return (void*) segment_break;
 	//		cprintf("\nsegment_break = %u\n",segment_break);
 
 		}
-		else if(numOfPages>0){
-			   segment_break += numOfPages * PAGE_SIZE;
-			   //allocate and mapped
+		else if(numOfPages>0&&numOfPages<(uint32)hardlimit ){
 
-			   return (void*)previous_break;
-		}*/
+			segment_break += numOfPages * PAGE_SIZE;
+			//int increment1=ROUNDUP(numOfPages,PAGE_SIZE);
+			//segment_break+=increment1;
+			while(numOfPages--){
 
-	return (void*)-1 ;
-	//====================================================
+			struct FrameInfo *ptr_frame_info;
 
-	//[PROJECT'24.MS2] Implement this function
-	// Write your code here, remove the panic and write your code
-	//panic("sbrk() is not implemented yet...!!");
+		  allocate_frame(&ptr_frame_info);
+
+					 //map_frame(ptr_page_directory,ptr_frame_info,ptr_frame_info->bufferedVA+=PAGE_SIZE,PERM_USER | PERM_PRESENT);
+int retur=map_frame(ptr_page_directory,ptr_frame_info,(uint32)segment_break ,PERM_USER | PERM_PRESENT);
+
+			 if((uint32*)retur==NULL){
+
+//			 return E_NO_MEM;
+				    return (void *)-1;
+
+			  }
+
+				}
+			return (void*)previous_break;
+	}
+
+
+//else return   return (void*)-1 ; wla?
+			   if(segment_break>hardlimit){
+				   return (void*)-1 ;
+			   }
+
+//			   else{
+//
+//	uint32 new_break = ROUNDUP(segment_break + numOfPages, PAGE_SIZE);
+//
+//	uint32 no_pages = (new_break - ROUNDUP(previous_break,PAGE_SIZE) ) / PAGE_SIZE;
+//
+//	segment_break = new_break;
+//
+//				   //allocate and mapped
+//
+//
+//			   }
+
+
+
+		return (void*) -1;
 }
+
+//TODO: [PROJECT'24.MS2 - BONUS#2] [1] KERNEL HEAP - Fast Page Allocator
+
 
 
 void* kmalloc(unsigned int size)
