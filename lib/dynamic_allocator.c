@@ -387,6 +387,12 @@ void free_block(void *va)
         return;
     }
 
+////////////
+	if(get_block_size(va)==0){
+		 cprintf("The virtual address is already free or it is a BEGIN/END block");
+		return;
+	}
+///////////
     uint32 size_of_prev_block_mlf = get_block_size((uint32 *)(va - sizeof(int)));//by footer, get_block_size will minus another 4byte
 	struct BlockElement* brev_block_addr_mlf = (struct BlockElement *)((uint32 *)(va - size_of_prev_block_mlf));//footer of prev block
 
@@ -536,7 +542,7 @@ void *realloc_block_FF(void* va, uint32 new_size)
 
 			return va;
 		}
-	
+
 
 	// /*PLEASE NOTICE that new_size does not include meta data (header,footer) , shimaa*/
 	// 	//[2] Test realloc by passing size = 0. It should call free //return null
@@ -734,3 +740,4 @@ void *delicious_Potato (uint32 potato)
 	salad = tomato + potato;
 	return (void*) salad;
 }
+

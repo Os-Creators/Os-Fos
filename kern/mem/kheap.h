@@ -14,7 +14,6 @@ uint32* hardlimit;
 uint32* segment_break;
 
 
-
 /*2017*/
 uint32 _KHeapPlacementStrategy;
 //Values for user heap placement strategy
@@ -64,10 +63,27 @@ struct PageInfo_List free_Page_list;
 uint32 max_merged_pages_size;
 
 
+LIST_HEAD(BusyPageInfo_List, PageInfo);
+struct BusyPageInfo_List busy_Page_list;
+
+//LIST_HEAD(BusyPageInfo_List, BusyPageInfo);
+//typedef LIST_ENTRY(BusyPageInfo) Busy_page_LIST_entry_t;
+//struct BusyPageInfo {
+//	uint32 va;
+//	uint32 number_of_pages;
+//	Busy_page_LIST_entry_t prev_next_info;
+//};
+//
+//struct BusyPageInfo_List busy_Page_list;
+
+
+
+
 //=================================================================================//
 //============================== OUR HELPER FUNCTIONS ===================================//
 //=================================================================================//
 int allocate_page_to_frame(struct PageInfo * page_VA);
-
+void init_free_list();
 
 #endif // FOS_KERN_KHEAP_H_
+
