@@ -8,10 +8,12 @@
 #include <inc/types.h>
 #include <inc/queue.h>
 
-unsigned int start;
+uint32* start;
 //unsigned int end;
-unsigned int hardlimit;
-unsigned int segment_break;
+uint32* hardlimit;
+uint32* segment_break;
+
+
 
 /*2017*/
 uint32 _KHeapPlacementStrategy;
