@@ -12,61 +12,48 @@
 //	Otherwise (if no memory OR initial size exceed the given limit): E_NO_MEM
 int initialize_kheap_dynamic_allocator(uint32 daStart, uint32 initSizeToAllocate, uint32 daLimit)
 {
+   int initialize_kheap_dynamic_allocator(uint32 daStart, uint32 initSizeToAllocate, uint32 daLimit)
+{
     //TODO: [PROJECT'24.MS2 - #01] [1] KERNEL HEAP - initialize_kheap_dynamic_allocator
 
-    uint32* start=(uint32*)daStart;
+     start=(uint32*)daStart;
+     hardlimit=(uint32*)daLimit;
+     segment_break = (uint32*)((char*)daStart + initSizeToAllocate);
 
-    uint32*  hardlimit=(uint32*)daLimit;
-
-    uint32* segment_break=(uint32*)daStart+initSizeToAllocate;
-
-            if ( start >hardlimit){
+            if (start > hardlimit){
             	//return E_NO_MEM ;
             	panic("exced the limit...!!");
-
             }
-
-
-            if(segment_break>hardlimit){
+            if(segment_break> hardlimit){
                // return E_NO_MEM;
             	panic("exced the limit...!!");
             }
-            uint32 num_pages;
-           // uint32 page_address=start;
-           // uint32 ptr_page_table = NULL;
-            struct FrameInfo **ptr_frame_info;
 
-           // uint32 check_allocations = 0;
+  
+         uint32* tmp_start=start;
+    	 while(tmp_start<segment_break)
+    	 {
+    	     struct FrameInfo *ptr_frame_info;
+             int ret1=allocate_frame(&ptr_frame_info);
+             if (ptr_frame_info == NULL || ret1 != 0) {
+                  cprintf("No enough memory for page itself!\n");
+                  return E_NO_MEM;
+             }
 
-   //  num_pages = ROUNDUP(initSizeToAllocate, PAGE_SIZE); num_pages /= PAGE_SIZE ;
+            int ret2=map_frame(ptr_page_directory,ptr_frame_info,(uint32)tmp_start,PERM_WRITEABLE |PERM_PRESENT);
+         	if (ret2 != 0)
+         	{
+               cprintf("No enough memory for page table!\n");
+               free_frame(ptr_frame_info) ;
+               return E_NO_MEM;
+            }
+            tmp_start = (uint32*)((char*)tmp_start+PAGE_SIZE);
+         }
 
-     if(start>(uint32*)KERNEL_HEAP_START &&segment_break<hardlimit ){
+    	 initialize_dynamic_allocator(daStart,initSizeToAllocate);
 
-      while(start<segment_break){
-
-    struct FrameInfo *ptr_frame_info;
-
-      allocate_frame(&ptr_frame_info);
-
- //map_frame(ptr_page_directory,ptr_frame_info,ptr_frame_info->bufferedVA+=PAGE_SIZE,PERM_USER | PERM_PRESENT);
- int retur=map_frame(ptr_page_directory,ptr_frame_info,(uint32) start,PERM_USER | PERM_PRESENT);
-
-    if((uint32*)retur==NULL){
-
-      return E_NO_MEM;
-
-       }
-      start += PAGE_SIZE;
-
-     // check_allocations ++;
-               }
-          }
-    initialize_dynamic_allocator( daStart,initSizeToAllocate);
-
-//       if(check_allocations==num_pages){
-//        return 0;
-//        }
        return 0;
+}
 }
 
 
