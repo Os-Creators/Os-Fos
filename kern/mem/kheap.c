@@ -57,75 +57,73 @@ int initialize_kheap_dynamic_allocator(uint32 daStart, uint32 initSizeToAllocate
 
 void* sbrk(int numOfPages)
 {
-//	/* numOfPages > 0: move the segment break of the kernel to increase the size of its heap by the given numOfPages,
-//	 * 				you should allocate pages and map them into the kernel virtual address space,
-//	 * 				and returns the address of the previous break (i.e. the beginning of newly mapped memory).
-//	 * numOfPages = 0: just return the current position of the segment break
-//	 *
-//	 * NOTES:
-//	 * 	1) Allocating additional pages for a kernel dynamic allocator will fail if the free frames are exhausted
-//	 * 		or the break exceed the limit of the dynamic allocator. If sbrk fails, return -1
-//	 */
-//
-//	//MS2: COMMENT THIS LINE BEFORE START CODING==========
-//	//return (void*)-1 ;
-//	//====================================================
-//
-//	//TODO: [PROJECT'24.MS2 - #02] [1] KERNEL HEAP - sbrk
-//	// Write your code here, remove the panic and write your code
-//	//panic("sbrk() is not implemented yet...!!");
-//	uint32 previous_break = segment_break;
-//		if (numOfPages == 0 )
-//		{
-//			return (void*) segment_break;
-//	//		cprintf("\nsegment_break = %u\n",segment_break);
-//
-//		}
-//		else if(numOfPages>0&&numOfPages<(uint32)hardlimit ){
-//
-//			segment_break += numOfPages * PAGE_SIZE;
-//			//int increment1=ROUNDUP(numOfPages,PAGE_SIZE);
-//			//segment_break+=increment1;
-//			while(numOfPages--){
-//
-//			struct FrameInfo *ptr_frame_info;
-//
-//		  allocate_frame(&ptr_frame_info);
-//
-//					 //map_frame(ptr_page_directory,ptr_frame_info,ptr_frame_info->bufferedVA+=PAGE_SIZE,PERM_USER | PERM_PRESENT);
-//int retur=map_frame(ptr_page_directory,ptr_frame_info,(uint32)segment_break ,PERM_USER | PERM_PRESENT);
-//
-//			 if((uint32*)retur==NULL){
-//
-////			 return E_NO_MEM;
-//				    return (void *)-1;
-//
-//			  }
-//
-//				}
-//			return (void*)previous_break;
-//	}
-//
-//
-////else return   return (void*)-1 ; wla?
-//			   if(segment_break>hardlimit){
-//				   return (void*)-1 ;
-//			   }
-//
-////			   else{
-////
-////	uint32 new_break = ROUNDUP(segment_break + numOfPages, PAGE_SIZE);
-////
-////	uint32 no_pages = (new_break - ROUNDUP(previous_break,PAGE_SIZE) ) / PAGE_SIZE;
-////
-////	segment_break = new_break;
-////
-////				   //allocate and mapped
-////
-////
-////			   }
-//
-		return (void*) -1;
+	/* numOfPages > 0: move the segment break of the kernel to increase the size of its heap by the given numOfPages,
+	 * 				you should allocate pages and map them into the kernel virtual address space,
+	 * 				and returns the address of the previous break (i.e. the beginning of newly mapped memory).
+	 * numOfPages = 0: just return the current position of the segment break
+	 *
+	 * NOTES:
+	 * 	1) Allocating additional pages for a kernel dynamic allocator will fail if the free frames are exhausted
+	 * 		or the break exceed the limit of the dynamic allocator. If sbrk fails, return -1
+	 */
+
+	//MS2: COMMENT THIS LINE BEFORE START CODING==========
+	//return (void*)-1 ;
+	//====================================================
+
+
+	uint32* previous_break = segment_break;
+
+	uint32* new_brk;
+
+		if (numOfPages == 0 )
+		{
+			return (void*) segment_break;
+			//cprintf("\nsegment_break = %u\n",segment_break);
+
+		}
+		 if(numOfPages>0){
+
+			//segment_break += numOfPages * PAGE_SIZE;
+
+
+			uint32 increment=ROUNDUP(numOfPages*PAGE_SIZE,PAGE_SIZE);
+
+			new_brk=segment_break+increment;
+			// new_brk = ROUNDUP(segment_break + numOfPages, PAGE_SIZE);
+
+			//				 if(new_brk == KERNEL_HEAP_START + DYN_ALLOC_MAX_SIZE )
+			//					    {
+			//
+			//					    	return (void*)-1;
+			//					    }
+			//segment_break+=increment;
+			//if(new_brk<hardlimit){
+
+					 while(numOfPages--){
+
+					struct FrameInfo *ptr_frame_info;
+
+				 allocate_frame(&ptr_frame_info);
+
+				//int retur=map_frame(ptr_page_directory,ptr_frame_info,(uint32)segment_break ,PERM_WRITEABLE);
+				int retur=map_frame(ptr_page_directory,ptr_frame_info,(uint32)previous_break  ,PERM_WRITEABLE);
+				 if((uint32*)retur==NULL){
+
+							//			 return E_NO_MEM;
+					 return (void *)-1;
+
+					  }
+
+				 previous_break+=PAGE_SIZE;
+				}
+				 segment_break=new_brk;
+
+						return (void*)previous_break;
+				 }
+
+					   return (void*)-1;
+
 }
 
 
