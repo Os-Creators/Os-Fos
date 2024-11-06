@@ -57,139 +57,51 @@ int initialize_kheap_dynamic_allocator(uint32 daStart, uint32 initSizeToAllocate
 
 void* sbrk(int numOfPages)
 {
-//	/* numOfPages > 0: move the segment break of the kernel to increase the size of its heap by the given numOfPages,
-//	 * 				you should allocate pages and map them into the kernel virtual address space,
-//	 * 				and returns the address of the previous break (i.e. the beginning of newly mapped memory).
-//	 * numOfPages = 0: just return the current position of the segment break
-//	 *
-//	 * NOTES:
-//	 * 	1) Allocating additional pages for a kernel dynamic allocator will fail if the free frames are exhausted
-//	 * 		or the break exceed the limit of the dynamic allocator. If sbrk fails, return -1
-//	 */
-//
-//	//MS2: COMMENT THIS LINE BEFORE START CODING==========
-//	//return (void*)-1 ;
-//	//====================================================
-//
-//	//TODO: [PROJECT'24.MS2 - #02] [1] KERNEL HEAP - sbrk
-//	// Write your code here, remove the panic and write your code
-//	//panic("sbrk() is not implemented yet...!!");
-//	uint32 previous_break = segment_break;
-//		if (numOfPages == 0 )
-//		{
-//			return (void*) segment_break;
-//	//		cprintf("\nsegment_break = %u\n",segment_break);
-//
-//		}
-//		else if(numOfPages>0&&numOfPages<(uint32)hardlimit ){
-//
-//			segment_break += numOfPages * PAGE_SIZE;
-//			//int increment1=ROUNDUP(numOfPages,PAGE_SIZE);
-//			//segment_break+=increment1;
-//			while(numOfPages--){
-//
-//			struct FrameInfo *ptr_frame_info;
-//
-//		  allocate_frame(&ptr_frame_info);
-//
-//					 //map_frame(ptr_page_directory,ptr_frame_info,ptr_frame_info->bufferedVA+=PAGE_SIZE,PERM_USER | PERM_PRESENT);
-//int retur=map_frame(ptr_page_directory,ptr_frame_info,(uint32)segment_break ,PERM_USER | PERM_PRESENT);
-//
-//			 if((uint32*)retur==NULL){
-//
-////			 return E_NO_MEM;
-//				    return (void *)-1;
-//
-//			  }
-//
-//				}
-//			return (void*)previous_break;
-//	}
-//
-//
-////else return   return (void*)-1 ; wla?
-//			   if(segment_break>hardlimit){
-//				   return (void*)-1 ;
-//			   }
-//
-////			   else{
-////
-////	uint32 new_break = ROUNDUP(segment_break + numOfPages, PAGE_SIZE);
-////
-////	uint32 no_pages = (new_break - ROUNDUP(previous_break,PAGE_SIZE) ) / PAGE_SIZE;
-////
-////	segment_break = new_break;
-////
-////				   //allocate and mapped
-////
-////
-////			   }
-//
-		return (void*) -1;
-}
+	/* numOfPages > 0: move the segment break of the kernel to increase the size of its heap by the given numOfPages,
+	 * 				you should allocate pages and map them into the kernel virtual address space,
+	 * 				and returns the address of the previous break (i.e. the beginning of newly mapped memory).
+	 * numOfPages = 0: just return the current position of the segment break
+	 *
+	 * NOTES:
+	 * 	1) Allocating additional pages for a kernel dynamic allocator will fail if the free frames are exhausted
+	 * 		or the break exceed the limit of the dynamic allocator. If sbrk fails, kernel should panic(...)
+	 */
 
+	//MS2: COMMENT THIS LINE BEFORE START CODING====
+	//return (void*)-1 ;
+	//====================================================
 
-void* kmalloc(unsigned int size)
-{
-	//[PROJECT'24.MS2] Implement this function
-	// Write your code here, remove the panic and write your code
-	//kpanic_into_prompt("kmalloc() is not implemented yet...!!");
+    if (numOfPages == 0)
+    {
+        return (void*)segment_break;
+    }
 
-	if(size <= DYN_ALLOC_MAX_BLOCK_SIZE)
-		return alloc_block_FF(size);
+    uint32* begin_alloc = segment_break, *prev_break=segment_break;
 
-	// use "isKHeapPlacementStrategyFIRSTFIT() ..." functions to check the current strategy
-	if(isKHeapPlacementStrategyFIRSTFIT() != 1){
-		panic("the strategy is not first fit");
-	}
-	//cprintf("in initialize list size %d,first element size %d",LIST_SIZE(&free_Page_list),LIST_FIRST(&free_Page_list)->number_of_pages);
+    uint32 increment = numOfPages * PAGE_SIZE;
+    uint32* new_brk = (uint32*)((char*)segment_break + increment);
 
+    if(new_brk>hardlimit)  // =?
+    {
+         return (void *)-1;
+    }
 
-    struct PageInfo* page_VA;
-	uint32 num_of_pages = ROUNDUP(size / PAGE_SIZE, PAGE_SIZE);
+        while(numOfPages--)
+        {
+            struct FrameInfo *ptr_frame_info;
+            allocate_frame(&ptr_frame_info);
+            int retur=map_frame(ptr_page_directory,ptr_frame_info,(uint32)begin_alloc,PERM_WRITEABLE | PERM_PRESENT);
+            if(retur!=0)
+            {
+                 free_frame(ptr_frame_info);
+                 return (void *)-1;  // no memory
+            }
+            begin_alloc=(uint32*)((char*)begin_alloc+PAGE_SIZE);
+        }
 
-	cprintf("hi0");
+        segment_break=new_brk;
 
-
-
-	if(max_merged_pages_size >= num_of_pages){
-
-		//see first element that fits all size
-		LIST_FOREACH(page_VA, &(free_Page_list))
-		{
-			if( (page_VA -> number_of_pages) >= num_of_pages){
-				uint32 tmp_num_of_pages=num_of_pages;
-				while(tmp_num_of_pages--){
-					cprintf("hi-");
-					if(allocate_page_to_frame(page_VA) != 0)return NULL;
-					page_VA = (struct PageInfo*)((char*)page_VA +PAGE_SIZE);
-				}
-				break;
-			}
-		}
-		cprintf("hi1");
-		//removing from the list
-		if(page_VA -> number_of_pages == num_of_pages)
-			LIST_REMOVE(&free_Page_list, page_VA);
-		else{
-			page_VA -> number_of_pages -= num_of_pages;
-			page_VA -> start_page_va = (uint32) (char*)(page_VA ->start_page_va)+(num_of_pages * PAGE_SIZE);
-		}
-		cprintf("hi2");
-
-		/////for kfree---------
-		struct PageInfo* busy_va =(struct PageInfo*)page_VA;  // might be a problem
-		busy_va->number_of_pages=num_of_pages;
-		busy_va->start_page_va=(uint32)page_VA;
-
-		LIST_INSERT_HEAD(&busy_Page_list,busy_va);
-		//---------------------
-
-		return page_VA;
-	}else{
-		return NULL;
-	}
-	//check data in the list (for realloc)
+        return (void*) prev_break;
 }
 
 void kfree(void* virtual_address)
