@@ -7,7 +7,7 @@
 #include <inc/assert.h>
 #include <inc/string.h>
 #include "../inc/dynamic_allocator.h"
-
+//#include "../kern/mem/kheap.h"
 
 //==================================================================================//
 //============================== GIVEN FUNCTIONS ===================================//
@@ -176,6 +176,7 @@ void *alloc_block_FF(uint32 size)
 				uint32 da_start = (uint32)sbrk(ROUNDUP(required_size, PAGE_SIZE)/PAGE_SIZE);
 				uint32 da_break = (uint32)sbrk(0);
 				initialize_dynamic_allocator(da_start, da_break - da_start);
+				//(uint32*) (da_start +  (da_break - da_start) - sizeof(int));
 
 			}
 
@@ -211,43 +212,57 @@ void *alloc_block_FF(uint32 size)
 			}
 		}
 
-		if ( lfirst597fitblock == NULL) {
+		if(lfirst597fitblock == NULL)
+		{
+			int num_of_pages=ROUNDUP(size_needed_by_blocks597, PAGE_SIZE)/PAGE_SIZE;
+			void* prev_segment = sbrk(num_of_pages);
 
-			//see ROUNDUP -> sprk-----------------
-			lfirst597fitblock = (struct BlockElement *)sbrk(ROUNDUP(size_needed_by_blocks597 + sizeof( lfirst597fitblock), PAGE_SIZE));
-			if ( lfirst597fitblock == (void *)-1) {
+			if (prev_segment == (void*)-1)
+			{
 				return NULL;
+			}
+			else
+			{
+				 uint32 increment = num_of_pages * PAGE_SIZE;
+				 uint32* end_block = (uint32*)((char*)prev_segment + increment-4);
+				 //cprintf("2");
+				 *(end_block) = 1;
+				 //cprintf("3");
+
+				 set_block_data(prev_segment,increment,0);
+				 free_block(prev_segment);
+
+				 return alloc_block_FF(size);
 			}
 
 		   //*((uint32 *) mfirst597fitblock) = size_needed_by_blocks;
-			//mfirst597fitblock = (struct BlockElement *)((char *) mfirst597fitblock + sizeof(uint32));
-		} else {
-		   uint32 remaining_size55 = lfirst597fitblocksize - size_needed_by_blocks597;
-
-		   //we dont have to check if after me is empty or not , because it will never be (if it was it would be already merged before)
-
-		   //block fits and have more
-		   if (remaining_size55 >= (DYN_ALLOC_MIN_BLOCK_SIZE + sizeof(uint32) + sizeof(uint32))/*16*/) {
-			   //no fragment
-			   struct BlockElement *new_block55 = (struct BlockElement *)((char *) lfirst597fitblock + size_needed_by_blocks597);
-
-			   set_block_data(new_block55, remaining_size55, 0);
-
-			   //free_block(new_block);
-		       LIST_INSERT_AFTER(&freeBlocksList,lfirst597fitblock , new_block55);
-		       LIST_REMOVE(&freeBlocksList, lfirst597fitblock);
-
-
-		       set_block_data( lfirst597fitblock,size_needed_by_blocks597,1);
-
-		   }else{
-			   //fragment
-			   set_block_data(lfirst597fitblock, lfirst597fitblocksize, 1);
-			   LIST_REMOVE(&freeBlocksList, lfirst597fitblock);
-		   }
-
-
+		   //mfirst597fitblock = (struct BlockElement *)((char *) mfirst597fitblock + sizeof(uint32));
 		}
+
+	   uint32 remaining_size55 = lfirst597fitblocksize - size_needed_by_blocks597;
+
+	   //we dont have to check if after me is empty or not , because it will never be (if it was it would be already merged before)
+
+	   //block fits and have more
+	   if (remaining_size55 >= (DYN_ALLOC_MIN_BLOCK_SIZE + sizeof(uint32) + sizeof(uint32))/*16*/) {
+		   //no fragment
+		   struct BlockElement *new_block55 = (struct BlockElement *)((char *) lfirst597fitblock + size_needed_by_blocks597);
+
+		   set_block_data(new_block55, remaining_size55, 0);
+
+		   //free_block(new_block);
+		   LIST_INSERT_AFTER(&freeBlocksList,lfirst597fitblock , new_block55);
+		   LIST_REMOVE(&freeBlocksList, lfirst597fitblock);
+
+
+		   set_block_data( lfirst597fitblock,size_needed_by_blocks597,1);
+
+	   }else{
+		   //fragment
+		   set_block_data(lfirst597fitblock, lfirst597fitblocksize, 1);
+		   LIST_REMOVE(&freeBlocksList, lfirst597fitblock);
+	   }
+
 		//cprintf("header in alloc. Actual addr H:%d H2:%p\n", *((uint32*)mfirst597fitblock-1), (uint32*)(mfirst597fitblock-4));
 
 		return lfirst597fitblock;
@@ -740,4 +755,5 @@ void *delicious_Potato (uint32 potato)
 	salad = tomato + potato;
 	return (void*) salad;
 }
+
 

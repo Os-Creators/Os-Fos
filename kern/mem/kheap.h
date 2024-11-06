@@ -70,6 +70,7 @@ struct BusyPageInfo_List busy_page_list;//list is unordered
 //=================================================================================//
 int allocate_page_to_frame(struct PageInfo * page_VA);
 void init_free_list();
+int numOfAllocPages_busyList(void* va);
 
 #endif // FOS_KERN_KHEAP_H_
 
