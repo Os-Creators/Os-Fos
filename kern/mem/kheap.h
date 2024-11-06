@@ -8,11 +8,6 @@
 #include <inc/types.h>
 #include <inc/queue.h>
 
-uint32* start;
-//unsigned int end;
-uint32* hardlimit;
-uint32* segment_break;
-
 
 /*2017*/
 uint32 _KHeapPlacementStrategy;
@@ -49,35 +44,26 @@ int numOfKheapVACalls ;
 
 //[PROJECT'24.MS2] add suitable code here
 
-LIST_HEAD(PageInfo_List, PageInfo);
+uint32* start;
+//unsigned int end;
+uint32* hardlimit;
+uint32* segment_break;
+
+
+
 typedef LIST_ENTRY(PageInfo) Free_page_LIST_entry_t;
 struct PageInfo {
-	uint32 start_page_va;    // data type?
-	uint32 end_page_va;
+	uint32 start_page_va;    // data type? (store address)
+	uint32 end_page_va;      // inclusive AKA free page
 	uint32 number_of_pages;
 	Free_page_LIST_entry_t prev_next_info;
 };
 
-struct PageInfo_List free_Page_list;
-
-uint32 max_merged_pages_size;
-
+LIST_HEAD(PageInfo_List, PageInfo);
+struct PageInfo_List free_page_list;//list is ordered
 
 LIST_HEAD(BusyPageInfo_List, PageInfo);
-struct BusyPageInfo_List busy_Page_list;
-
-//LIST_HEAD(BusyPageInfo_List, BusyPageInfo);
-//typedef LIST_ENTRY(BusyPageInfo) Busy_page_LIST_entry_t;
-//struct BusyPageInfo {
-//	uint32 va;
-//	uint32 number_of_pages;
-//	Busy_page_LIST_entry_t prev_next_info;
-//};
-//
-//struct BusyPageInfo_List busy_Page_list;
-
-
-
+struct BusyPageInfo_List busy_page_list;//list is unordered
 
 //=================================================================================//
 //============================== OUR HELPER FUNCTIONS ===================================//

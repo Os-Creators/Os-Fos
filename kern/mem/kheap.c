@@ -38,7 +38,7 @@ int initialize_kheap_dynamic_allocator(uint32 daStart, uint32 initSizeToAllocate
                   return E_NO_MEM;
              }
 
-            int ret2=map_frame(ptr_page_directory,ptr_frame_info,(uint32)tmp_start,PERM_WRITEABLE |PERM_PRESENT);
+            int ret2=map_frame(ptr_page_directory,ptr_frame_info,(uint32)tmp_start,PERM_WRITEABLE);
          	if (ret2 != 0)
          	{
                cprintf("No enough memory for page table!\n");
@@ -130,148 +130,157 @@ void* sbrk(int numOfPages)
 void* kmalloc(unsigned int size)
 {
 	//[PROJECT'24.MS2] Implement this function
-	// Write your code here, remove the panic and write your code
+	//Write your code here, remove the panic and write your code
 	//kpanic_into_prompt("kmalloc() is not implemented yet...!!");
 
+	// Block Allocator
 	if(size <= DYN_ALLOC_MAX_BLOCK_SIZE)
 		return alloc_block_FF(size);
 
-	// use "isKHeapPlacementStrategyFIRSTFIT() ..." functions to check the current strategy
-	if(isKHeapPlacementStrategyFIRSTFIT() != 1){
-		panic("the strategy is not first fit");
+	// Page Allocator
+	if(isKHeapPlacementStrategyFIRSTFIT() != 1)
+	{
+		return NULL;   // doctor didn't mention that it should panic if not FF
 	}
-	//cprintf("in initialize list size %d,first element size %d",LIST_SIZE(&free_Page_list),LIST_FIRST(&free_Page_list)->number_of_pages);
 
-
-    struct PageInfo* page_VA;
 	uint32 num_of_pages = ROUNDUP(size / PAGE_SIZE, PAGE_SIZE);
 
-	cprintf("hi0");
+	// Search for FF in free_list & Allocate
 
+    struct PageInfo* page_VA, *st_page_VA=NULL;
 
-
-	if(max_merged_pages_size >= num_of_pages){
-
-		//see first element that fits all size
-		LIST_FOREACH(page_VA, &(free_Page_list))
+		LIST_FOREACH(page_VA, &(free_page_list))
 		{
-			if( (page_VA -> number_of_pages) >= num_of_pages){
+			if(page_VA->number_of_pages >= num_of_pages)
+			{
+				st_page_VA=page_VA;
+
 				uint32 tmp_num_of_pages=num_of_pages;
-				while(tmp_num_of_pages--){
-					cprintf("hi-");
-					if(allocate_page_to_frame(page_VA) != 0)return NULL;
+				while(tmp_num_of_pages--)
+				{
+					if(allocate_page_to_frame(page_VA) != 0) return NULL;
 					page_VA = (struct PageInfo*)((char*)page_VA +PAGE_SIZE);
 				}
+
 				break;
 			}
-		}
-		cprintf("hi1");
-		//removing from the list
-		if(page_VA -> number_of_pages == num_of_pages)
-			LIST_REMOVE(&free_Page_list, page_VA);
-		else{
-			page_VA -> number_of_pages -= num_of_pages;
-			page_VA -> start_page_va = (uint32) (char*)(page_VA ->start_page_va)+(num_of_pages * PAGE_SIZE);
-		}
-		cprintf("hi2");
 
-		/////for kfree---------
-		struct PageInfo* busy_va =(struct PageInfo*)page_VA;  // might be a problem
+		}
+
+		if(st_page_VA==NULL) return NULL; // couldn't allocate
+
+
+		// add in busy_list
+		struct PageInfo* busy_va =(struct PageInfo*)st_page_VA;
 		busy_va->number_of_pages=num_of_pages;
-		busy_va->start_page_va=(uint32)page_VA;
+		busy_va->start_page_va=st_page_VA->start_page_va;
+		busy_va->end_page_va=(uint32)page_VA;
 
-		LIST_INSERT_HEAD(&busy_Page_list,busy_va);
-		//---------------------
+		LIST_INSERT_HEAD(&busy_page_list,busy_va); //list is unordered
 
-		return page_VA;
-	}else{
-		return NULL;
-	}
-	//check data in the list (for realloc)
+
+		// remove from free_list
+		if(st_page_VA->number_of_pages == num_of_pages)
+		{
+			LIST_REMOVE(&free_page_list, st_page_VA);
+		}
+		else
+		{
+			st_page_VA -> number_of_pages -= num_of_pages;
+			st_page_VA -> start_page_va = (uint32)page_VA; //final page address after allocation
+			// end address will be the same
+		}
+
+		return st_page_VA; //will the address be the same after removal?
+
+	    //check data in the list (for realloc) [copying data]
 }
 
 void kfree(void* virtual_address)
 {
-	//[PROJECT'24.MS2] Implement this function
-	// Write your code here, remove the panic and write your code
-	//panic("kfree() is not implemented yet...!!");
-
-	//block allocator ?
-	if(virtual_address > (void*)start && virtual_address < (void*)(hardlimit+PAGE_SIZE)){
-		free_block(virtual_address);
-	}
-
-	uint32* va = ROUNDDOWN(virtual_address,PAGE_SIZE);
-	uint32 num_of_pages = 0;
-
-	//getting how many pages to free
-	struct PageInfo* busy_Page;
-	LIST_FOREACH(busy_Page, &(busy_Page_list))
-	{
-		if( (busy_Page -> start_page_va) == (uint32)va){
-			num_of_pages = busy_Page -> number_of_pages;
-			break;
-		}
-	}
-	if(num_of_pages == 0){
-		panic("page is already free !");
-	}
-
-	//unmapping
-	uint32 tmp_num_of_pages = num_of_pages;
-	while(tmp_num_of_pages--){
-		unmap_frame(ptr_page_directory, (uint32) va);
-		va += PAGE_SIZE;
-	}
-	va=ROUNDDOWN(virtual_address,PAGE_SIZE); //because va changed in the line before this
-
-
-	//making the pointer that will be added to the list
-	struct PageInfo* new_free_Page = (struct PageInfo*)va;
-	new_free_Page ->start_page_va = (uint32)va;
-	new_free_Page-> number_of_pages = num_of_pages;
-	new_free_Page -> end_page_va = (uint32)( (char*)va + (num_of_pages*PAGE_SIZE) -  PAGE_SIZE); //beginning of last page
-
-	//updating free page list and merging if possible
-	struct PageInfo* free_Page;
-	LIST_FOREACH(free_Page, &(free_Page_list))
-	{
-		if( (free_Page -> start_page_va) < (uint32)new_free_Page ->start_page_va){
-
-			if((free_Page -> end_page_va) + PAGE_SIZE == (uint32)new_free_Page ->start_page_va){
-				//merging
-				free_Page -> number_of_pages += new_free_Page ->number_of_pages;
-				free_Page -> end_page_va += new_free_Page ->end_page_va;
-				if(max_merged_pages_size < free_Page -> number_of_pages )max_merged_pages_size = free_Page -> number_of_pages;
-
-				break;
-			}else continue;
-			//if end_page_va > va then already free --> our va is between start and end of free block
-
-		}else{
-			if((free_Page -> start_page_va) - PAGE_SIZE == (uint32)new_free_Page ->end_page_va){
-				//merging
-				free_Page = (struct PageInfo*)new_free_Page ->start_page_va;//check that line...not easy thing to delete
-				free_Page -> start_page_va = new_free_Page ->start_page_va;
-				free_Page -> number_of_pages += new_free_Page ->number_of_pages;
-
-				if(max_merged_pages_size < free_Page -> number_of_pages )max_merged_pages_size = free_Page -> number_of_pages;
-				break;
-			}else {
-				//store in the list normally
-				LIST_INSERT_BEFORE(&(free_Page_list),free_Page,new_free_Page);
-				if(max_merged_pages_size < free_Page -> number_of_pages )max_merged_pages_size = free_Page -> number_of_pages;
-
-				break;
-			}
-		}
-	}
-
-	//what if va is not in beginning of address we allocated in kmlloc
-
-	//you need to get the size of the given allocation using its address
-	//refer to the project presentation and documentation for details
-
+//	//[PROJECT'24.MS2] Implement this function
+//	// Write your code here, remove the panic and write your code
+//	//panic("kfree() is not implemented yet...!!");
+//	//you need to get the size of the given allocation using its address
+//	//refer to the project presentation and documentation for details
+//
+//	//block allocator ?
+//	if(virtual_address > (void*)start && virtual_address < (void*)(hardlimit+PAGE_SIZE)){
+//			free_block(virtual_address);
+//	}
+//
+//	if(virtual_address > (void*)start && virtual_address < (void*)(hardlimit+PAGE_SIZE)){
+//		free_block(virtual_address);
+//	}
+//
+//	uint32* va = ROUNDDOWN(virtual_address,PAGE_SIZE);
+//	uint32 num_of_pages = 0;
+//
+//	//getting how many pages to free
+//	struct PageInfo* busy_Page;
+//	LIST_FOREACH(busy_Page, &(busy_page_list))
+//	{
+//		if( (busy_Page -> start_page_va) == (uint32)va){
+//			num_of_pages = busy_Page -> number_of_pages;
+//			break;
+//		}
+//	}
+//	if(num_of_pages == 0){
+//		panic("page is already free !"); // return
+//	}
+//
+//	//unmapping
+//	uint32 tmp_num_of_pages = num_of_pages;
+//	while(tmp_num_of_pages--){
+//		unmap_frame(ptr_page_directory, (uint32) va);
+//		va = (uint32*)((char*)va+ PAGE_SIZE);
+//	}
+//
+//	// merging
+//
+//	va=ROUNDDOWN(virtual_address,PAGE_SIZE); //because va changed in the line before this
+//
+//
+//	//making the pointer that will be added to the list
+//	struct PageInfo* new_free_Page = (struct PageInfo*)va;
+//	new_free_Page ->start_page_va = (uint32)va;
+//	new_free_Page-> number_of_pages = num_of_pages;
+//	new_free_Page -> end_page_va = (uint32)( (char*)va + (num_of_pages*PAGE_SIZE) -  PAGE_SIZE); //beginning of last page
+//
+//	//updating free page list and merging if possible
+//	struct PageInfo* free_Page;
+//	LIST_FOREACH(free_Page, &(free_page_list))
+//	{
+//		if( (free_Page -> start_page_va) < (uint32)new_free_Page ->start_page_va){
+//
+//			if((free_Page -> end_page_va) + PAGE_SIZE == (uint32)new_free_Page ->start_page_va){
+//				//merging
+//				free_Page -> number_of_pages += new_free_Page ->number_of_pages;
+//				free_Page -> end_page_va += new_free_Page ->end_page_va;
+//				if(max_consecutive_free_pages < free_Page -> number_of_pages )max_consecutive_free_pages = free_Page -> number_of_pages;
+//
+//				break;
+//			}else continue;
+//			//if end_page_va > va then already free --> our va is between start and end of free block
+//
+//		}else{
+//			if((free_Page -> start_page_va) - PAGE_SIZE == (uint32)new_free_Page ->end_page_va){
+//				//merging
+//				free_Page = (struct PageInfo*)new_free_Page ->start_page_va;//check that line...not easy thing to delete
+//				free_Page -> start_page_va = new_free_Page ->start_page_va;
+//				free_Page -> number_of_pages += new_free_Page ->number_of_pages;
+//
+//				if(max_consecutive_free_pages < free_Page -> number_of_pages )max_consecutive_free_pages = free_Page -> number_of_pages;
+//				break;
+//			}else {
+//				//store in the list normally
+//				LIST_INSERT_BEFORE(&(free_page_list),free_Page,new_free_Page);
+//				if(max_consecutive_free_pages < free_Page -> number_of_pages )max_consecutive_free_pages = free_Page -> number_of_pages;
+//
+//				break;
+//			}
+//		}
+//	}
 }
 
 unsigned int kheap_virtual_address(unsigned int physical_address)
@@ -320,52 +329,51 @@ void *krealloc(void *virtual_address, uint32 new_size)
 	panic("krealloc() is not implemented yet...!!");
 }
 
+
 //=================================================================================//
-//============================== OUR HELPER FUNCTIONS ===================================//
+//============================== OUR HELPER FUNCTIONS =============================//
 //=================================================================================//
 
 int allocate_page_to_frame(struct PageInfo * page_VA){
+
 	//[1] Check if the page exists or not?
 	uint32 *ptr_table = NULL;
 	struct FrameInfo* ptr_frame_info = get_frame_info(ptr_page_directory, (uint32)page_VA, &ptr_table);
-	if (ptr_frame_info != NULL) return 0;
+	if (ptr_frame_info != NULL) return 0; // already allocated
 
 	//[2] Allocate new frame
-	int ret = allocate_frame(&ptr_frame_info) ;
-	if (ptr_frame_info == NULL || ret != 0) {
-		cprintf("No enough memory for page itself!\n");
+	allocate_frame(&ptr_frame_info);  //it panics if there is no memory
+
+	//[3] Map the given va to the allocated frame
+	int ret = map_frame(ptr_page_directory, ptr_frame_info, (uint32)page_VA, PERM_WRITEABLE);
+	if (ret != 0) {
+		cprintf("No enough memory for page table!\n");
+		free_frame(ptr_frame_info);
 		return -1;
 	}
 
-	//[3] Map the given va to the allocated frame
-	//check perms
-	ret = map_frame(ptr_page_directory, ptr_frame_info, (uint32)page_VA, PERM_WRITEABLE|PERM_PRESENT|PERM_AVAILABLE);
-	if (ret != 0) {
-		cprintf("No enough memory for page table!\n"); //free the allocated frame
-		free_frame(ptr_frame_info) ;
-		return -1;
-	}
 	return 0 ;
 }
+
 
 void init_free_list()
 {
 
-	    struct PageInfo* page_allocator = (struct PageInfo*)((char*)hardlimit+PAGE_SIZE);//any thing to not making it null
-
+	    // ??????????????
 		//check for not found frame in the next code
-		struct FrameInfo* ptr_frame_info2;
-		allocate_frame(&ptr_frame_info2);
-		map_frame(ptr_page_directory,ptr_frame_info2,(uint32)((char*)hardlimit+PAGE_SIZE), PERM_PRESENT|  PERM_AVAILABLE | PERM_WRITEABLE );
+		struct FrameInfo* ptr_frame_info;
+		allocate_frame(&ptr_frame_info);
+		map_frame(ptr_page_directory,ptr_frame_info,(uint32)((char*)hardlimit+PAGE_SIZE),PERM_WRITEABLE);
 		//---
 
-		//initialize data
-		page_allocator -> start_page_va = (uint32)((char*)hardlimit + PAGE_SIZE);
-		page_allocator -> end_page_va = KERNEL_HEAP_MAX - PAGE_SIZE; //beginning of last page
-		page_allocator -> number_of_pages = (KERNEL_HEAP_MAX / PAGE_SIZE);
-		max_merged_pages_size = (KERNEL_HEAP_MAX / PAGE_SIZE);
+	    struct PageInfo* p_alloc = (struct PageInfo*)((char*)hardlimit+PAGE_SIZE);//to make it not null
 
-		LIST_INSERT_HEAD(&free_Page_list,page_allocator);
+	    //round down in any of these?
+	    p_alloc -> start_page_va = (uint32)((char*)hardlimit + PAGE_SIZE);
+	    p_alloc -> end_page_va = KERNEL_HEAP_MAX - PAGE_SIZE;
+	    p_alloc -> number_of_pages = (KERNEL_HEAP_MAX-p_alloc->start_page_va) / PAGE_SIZE;
+
+		LIST_INSERT_HEAD(&free_page_list,p_alloc);
 
 }
 
