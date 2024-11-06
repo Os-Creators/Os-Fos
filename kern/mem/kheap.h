@@ -60,10 +60,10 @@ struct PageInfo {
 };
 
 LIST_HEAD(PageInfo_List, PageInfo);
-struct PageInfo_List free_page_list;
+struct PageInfo_List free_page_list;//list is ordered
 
 LIST_HEAD(BusyPageInfo_List, PageInfo);
-struct BusyPageInfo_List busy_page_list;
+struct BusyPageInfo_List busy_page_list;//list is unordered
 
 //=================================================================================//
 //============================== OUR HELPER FUNCTIONS ===================================//
