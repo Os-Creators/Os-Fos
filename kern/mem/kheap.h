@@ -49,8 +49,6 @@ uint32* start;
 uint32* hardlimit;
 uint32* segment_break;
 
-
-
 typedef LIST_ENTRY(PageInfo) Free_page_LIST_entry_t;
 struct PageInfo {
 	uint32 start_page_va;    // data type? (store address)
@@ -70,6 +68,8 @@ struct BusyPageInfo_List busy_page_list;//list is unordered
 //=================================================================================//
 int allocate_page_to_frame(struct PageInfo * page_VA);
 void init_free_list();
+int numOfAllocPages_busyList(void* va);
+void merge_freeList(void* va, int num_of_pages);
 
 #endif // FOS_KERN_KHEAP_H_
 

@@ -212,35 +212,36 @@ void *alloc_block_FF(uint32 size)
 			}
 		}
 
-		if ( lfirst597fitblock == NULL) {
+		if(lfirst597fitblock == NULL)
+		{
+			int num_of_pages=ROUNDUP(size_needed_by_blocks597, PAGE_SIZE)/PAGE_SIZE;
+			void* prev_segment = sbrk(num_of_pages);
 
-			//see ROUNDUP -> sprk-----------------
-			lfirst597fitblock = (struct BlockElement *)sbrk(ROUNDUP(size_needed_by_blocks597, PAGE_SIZE)/PAGE_SIZE);
-			if ( lfirst597fitblock == (void *)-1) {
+
+			if (prev_segment == (void*)-1)
+			{
 				return NULL;
-			}else{
-				//uint32* end_block = (uint32*)((char*)segment_break-sizeof(int)) ;
-				uint32* end_block = (uint32*)lfirst597fitblock ;
 
-			    if(is_free_block(end_block-sizeof(int))){
-			    	uint32 prev_block_size =get_block_size(end_block-sizeof(int));
-			    	uint32* prev_block_va = (uint32*)(((char*)end_block - prev_block_size) + sizeof(int));
-			    	set_block_data( prev_block_va,prev_block_size + size_needed_by_blocks597,0);
-			    }else{
-			    	set_block_data( end_block,size_needed_by_blocks597,0);
-			    	LIST_INSERT_TAIL(&freeBlocksList,(struct BlockElement *)end_block);
-			    	//lfirst597fitblock = (struct BlockElement*)end_block;
+			}
+			else
+			{
+				 uint32 increment = num_of_pages * PAGE_SIZE;
+				 uint32* end_block = (uint32*)((char*)prev_segment + increment-4);
+				 //cprintf("2");
+				 *(end_block) = 1;
+				 //cprintf("3");
 
-			    }
-			    end_block = (uint32*)((char*)end_block+size_needed_by_blocks597);
-				*(end_block) = 1;
+				 set_block_data(prev_segment,increment,0);
+				 free_block(prev_segment);
 
-
+				 return alloc_block_FF(size);
 			}
 
 		   //*((uint32 *) mfirst597fitblock) = size_needed_by_blocks;
-			//mfirst597fitblock = (struct BlockElement *)((char *) mfirst597fitblock + sizeof(uint32));
+
+		   //mfirst597fitblock = (struct BlockElement *)((char *) mfirst597fitblock + sizeof(uint32));
 		}
+
 	   uint32 remaining_size55 = lfirst597fitblocksize - size_needed_by_blocks597;
 
 	   //we dont have to check if after me is empty or not , because it will never be (if it was it would be already merged before)
@@ -264,7 +265,6 @@ void *alloc_block_FF(uint32 size)
 		   set_block_data(lfirst597fitblock, lfirst597fitblocksize, 1);
 		   LIST_REMOVE(&freeBlocksList, lfirst597fitblock);
 	   }
-
 
 
 		//cprintf("header in alloc. Actual addr H:%d H2:%p\n", *((uint32*)mfirst597fitblock-1), (uint32*)(mfirst597fitblock-4));
@@ -759,4 +759,5 @@ void *delicious_Potato (uint32 potato)
 	salad = tomato + potato;
 	return (void*) salad;
 }
+
 
