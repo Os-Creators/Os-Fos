@@ -106,7 +106,6 @@ void* kmalloc(unsigned int size)
 	//[PROJECT'24.MS2] Implement this function
 	//Write your code here, remove the panic and write your code
 	//kpanic_into_prompt("kmalloc() is not implemented yet...!!");
-
 	// Block Allocator
 	if(size <= DYN_ALLOC_MAX_BLOCK_SIZE)
 		return alloc_block_FF(size);
@@ -116,34 +115,97 @@ void* kmalloc(unsigned int size)
 	{
 		return NULL;
 	}
+	uint32 num_of_pages = ROUNDUP(size , PAGE_SIZE)/ PAGE_SIZE; //check calculation
+	//cprintf("free list size = %d , first element start address %p , first element num pages: %d , requested num of pages %d\n",LIST_SIZE(&free_page_list),LIST_FIRST(&free_page_list)->start_page_va,LIST_FIRST(&free_page_list)->number_of_pages,num_of_pages);
 
-	uint32 num_of_pages = ROUNDUP(size / PAGE_SIZE, PAGE_SIZE);
+	bool page_found = 0;
+	uint32 page_allocator_pages = (KERNEL_HEAP_MAX-((uint32)hardlimit + PAGE_SIZE))/PAGE_SIZE;
 
-	// Search for FF in free_list & Allocate
+	if(num_of_pages > page_allocator_pages)return NULL;
 
+	uint32 return_addr;
+	for(int i =0 ; i < page_allocator_pages ; i++){
+		if(pages_arr[i].is_free && pages_arr[i].number_of_pages >= num_of_pages){
+			//cprintf("i = %d , va %p \n",i,(uint32*)pages_arr[i].start_page_va);
+
+			if(pages_arr[i].number_of_pages > num_of_pages){
+
+				uint32 splited_free_page_index = (i + num_of_pages);
+
+				pages_arr[splited_free_page_index].number_of_pages = pages_arr[i].number_of_pages -num_of_pages;
+				pages_arr[splited_free_page_index].is_free = 1;
+				pages_arr[splited_free_page_index].start_page_va = ((uint32)hardlimit + PAGE_SIZE) + (splited_free_page_index*PAGE_SIZE);
+				pages_arr[splited_free_page_index].is_first_addr = 1;
+
+
+				pages_arr[splited_free_page_index+pages_arr[splited_free_page_index].number_of_pages-1].number_of_pages = pages_arr[i].number_of_pages -num_of_pages;
+				pages_arr[splited_free_page_index+pages_arr[splited_free_page_index].number_of_pages-1].is_free = 1;
+
+			}
+
+
+			pages_arr[i].is_free = 0;
+			pages_arr[i].number_of_pages = num_of_pages;
+			pages_arr[i].start_page_va = ((uint32)hardlimit + PAGE_SIZE) + (i*PAGE_SIZE);
+			return_addr = pages_arr[i].start_page_va;
+			pages_arr[i].is_first_addr = 1;
+
+
+			pages_arr[i+num_of_pages-1].is_last_addr =1;
+			pages_arr[i+num_of_pages-1].is_free = 0;
+			pages_arr[i+num_of_pages-1].number_of_pages=num_of_pages;
+
+
+			page_found = 1;
+
+			//mapping
+			uint32 tmp_num_of_pages=num_of_pages;
+			uint32 start_page_va = pages_arr[i].start_page_va;
+			while(tmp_num_of_pages--)
+			{
+				if(allocate_page_to_frame((uint32*)(start_page_va)) != 0) return NULL;
+				start_page_va = (start_page_va +PAGE_SIZE);
+			}
+
+			break;
+
+		}else{
+			i = (i + pages_arr[i].number_of_pages) -1;//for loop will increment it again and remove (-1)
+		}
+	}
+
+	if(!page_found) return NULL; // couldn't allocate
+
+	return (uint32*)return_addr;
+
+	/*// Search for FF in free_list & Allocate
     struct PageInfo* page_VA, *st_page_VA=NULL;
+    uint32 start_page_va;
 
 		LIST_FOREACH(page_VA, &(free_page_list))
 		{
 			if(page_VA->number_of_pages >= num_of_pages)
 			{
 				st_page_VA=page_VA;
-
+				start_page_va= page_VA -> start_page_va;
+				cprintf("page_VA -> start_page_va %d his pages %d \n",page_VA -> number_of_pages,st_page_VA->number_of_pages);
 				uint32 tmp_num_of_pages=num_of_pages;
 				while(tmp_num_of_pages--)
 				{
-					if(allocate_page_to_frame(page_VA) != 0) return NULL;
-					page_VA = (struct PageInfo*)((char*)page_VA +PAGE_SIZE);
+					if(allocate_page_to_frame((uint32*)(page_VA ->start_page_va)) != 0) return NULL;
+					page_VA ->start_page_va = (page_VA ->start_page_va +PAGE_SIZE);
 				}
+				cprintf("page_VA -> start_page_va %d his pages %d \n",page_VA -> number_of_pages,st_page_VA->number_of_pages);
 
 				break;
 			}
 
 		}
-
+		cprintf("atart %p\n",(uint32*)start_page_va);
 		if(st_page_VA==NULL) return NULL; // couldn't allocate
 
 		cprintf("st_page_va = %x \n",st_page_VA);
+		cprintf("page_VA -> start_page_va %d his pages %d \n",page_VA -> number_of_pages,st_page_VA->number_of_pages);
 
 		// add in busy_list
 		struct PageInfo* busy_va =(struct PageInfo*)st_page_VA;
@@ -156,20 +218,23 @@ void* kmalloc(unsigned int size)
 		cprintf("st_page_va = %x \n",st_page_VA);
 
 		// remove from free_list
+		cprintf("our pages %d his pages %d \n",num_of_pages,st_page_VA->number_of_pages);
 		if(st_page_VA->number_of_pages == num_of_pages)
 		{
 			LIST_REMOVE(&free_page_list, st_page_VA);
 		}
 		else
 		{
+			cprintf("here\n");
 			st_page_VA -> number_of_pages -= num_of_pages;
-			st_page_VA -> start_page_va = (uint32)page_VA; //final page address after allocation
+			st_page_VA -> start_page_va = start_page_va; //final page address after allocation
 			// end address will be the same
 		}
 
-		cprintf("st_page_va = %x \n",st_page_VA);
+		cprintf("return st_page_va = %x \n",st_page_VA);
+		//cprintf("free list size = %d , first element start address %p , first element num pages: %d\n",LIST_SIZE(&free_page_list),LIST_FIRST(&free_page_list)->start_page_va,LIST_FIRST(&free_page_list)->number_of_pages);
 
-		return st_page_VA; //will the address be the same after removal?
+		return (uint32*)(st_page_VA->start_page_va); //will the address be the same after removal?*/
 
 	    //check data in the list (for realloc) [copying data]
 }
@@ -190,11 +255,77 @@ void kfree(void* virtual_address)
 	}
 	else if((uint32*)virtual_address >= (uint32*)((char*)hardlimit+PAGE_SIZE) && (uint32)virtual_address <= KERNEL_HEAP_MAX)
 	{
+		uint32* va = ROUNDDOWN(virtual_address,PAGE_SIZE);
+		//if(va == (uint32*)pages_arr[0].start_page_va)cprintf("equal");
+		uint32 pageIndex = ((uint32)va - ((uint32)hardlimit+PAGE_SIZE))/PAGE_SIZE;
 
-		/// would he give me an address that in the middle of a free block?
+		uint32 num_of_pages = pages_arr[pageIndex].number_of_pages;
+		//cprintf(" index %d ,size %d",pageIndex,num_of_pages);
+
+		if(pages_arr[pageIndex].is_free || !pages_arr[pageIndex].is_first_addr){
+			cprintf("already free Virtual address or not first address in allocated pages...");return;
+		}
+
+
+		pages_arr[pageIndex].is_free = 1;
+
+//		pages_arr[pageIndex + num_of_pages -1].is_free = 1;
+//		pages_arr[pageIndex + num_of_pages -1].number_of_pages = num_of_pages;
+//		pages_arr[pageIndex + num_of_pages -1].is_first_addr = 0;
+
+
+		//cprintf(" last index %d ,size %d",pageIndex + num_of_pages -1);
+
+		//un_map the pages
+		uint32 tmp_num_of_pages = num_of_pages;
+		while(tmp_num_of_pages--)
+		{
+			unmap_frame(ptr_page_directory, (uint32) va);
+			va = (uint32*)((char*)va+ PAGE_SIZE);
+		}
+
+
+		if(pageIndex != 0)
+		if(pages_arr[pageIndex-1].is_free){
+			//merge
+			//update pageindex to the begin
+			uint32 num_of_old_pages = num_of_pages;
+			uint32 num_of_pages = pages_arr[pageIndex-1].number_of_pages;
+
+			int tmppageIndex = (int)(pageIndex - pages_arr[pageIndex-1].number_of_pages);
+			pageIndex = tmppageIndex >= 0 ? tmppageIndex : -tmppageIndex;
+
+			pages_arr[pageIndex].number_of_pages = num_of_old_pages+num_of_pages;
+
+			pages_arr[pageIndex+num_of_old_pages+num_of_pages-1].number_of_pages = num_of_old_pages+num_of_pages;//updating last page in block of pages
+			pages_arr[pageIndex+num_of_old_pages+num_of_pages-1].is_free = 1;
+
+//			cprintf(" merge bfr index %d ,size %d",pageIndex,num_of_old_pages+num_of_pages);
+//			cprintf("merged before last index %d\n",pageIndex+num_of_old_pages+num_of_pages-1);
+
+		}
+
+		if(pageIndex < KERNEL_HEAP_MAX - PAGE_SIZE)
+		if(pages_arr[pageIndex+num_of_pages].is_free){
+			//merge
+			uint32 added_size = pages_arr[pageIndex+num_of_pages].number_of_pages;
+			pages_arr[pageIndex].number_of_pages += added_size;
+
+			//update last page in the block
+			pages_arr[pageIndex+pages_arr[pageIndex].number_of_pages-1].number_of_pages += pages_arr[pageIndex].number_of_pages;
+			pages_arr[pageIndex+pages_arr[pageIndex].number_of_pages-1].is_free = 1;
+
+//			cprintf(" merge aftr index %d ,size %d",pageIndex,pages_arr[pageIndex+pages_arr[pageIndex].number_of_pages-1].number_of_pages);
+//			cprintf("merged aftr last index %d\n",pageIndex+pages_arr[pageIndex].number_of_pages-1);
+
+
+		}
+		//if(!not)pages_arr[pageIndex + num_of_pages -1].is_free = 1;;
+		/*/// would he give me an address that in the middle of a free block?
 
 		uint32* va = ROUNDDOWN(virtual_address,PAGE_SIZE);
-		uint32 num_of_pages = numOfAllocPages_busyList(va);
+		uint32 pageIndex = ((uint32)va - ((uint32)hardlimit+PAGE_SIZE))/PAGE_SIZE;
+		uint32 num_of_pages = numOfAllocPages_busyList(va);//
 
 		if(num_of_pages==0) return; // already free
 
@@ -211,7 +342,7 @@ void kfree(void* virtual_address)
 		LIST_REMOVE(&busy_page_list,(struct PageInfo*)va);
 
 		//add in free list & merge
-		merge_freeList(va, num_of_pages);
+		merge_freeList(va, num_of_pages);*/
 
 	}
 	else
@@ -272,12 +403,12 @@ void *krealloc(void *virtual_address, uint32 new_size)
 //============================== OUR HELPER FUNCTIONS =============================//
 //=================================================================================//
 
-int allocate_page_to_frame(struct PageInfo * page_VA){
+int allocate_page_to_frame(void * page_VA){
 
 	//[1] Check if the page exists or not?
 	uint32 *ptr_table = NULL;
-	struct FrameInfo* ptr_frame_info = get_frame_info(ptr_page_directory, (uint32)page_VA, &ptr_table);
-	if (ptr_frame_info != NULL) return 0; // already allocated
+	struct FrameInfo* ptr_frame_info ;/*= get_frame_info(ptr_page_directory, (uint32)page_VA, &ptr_table);
+	if (ptr_frame_info != NULL) return 0; // already allocated*/
 
 	//struct FrameInfo *ptr_frame_info;
 
@@ -291,7 +422,6 @@ int allocate_page_to_frame(struct PageInfo * page_VA){
 		free_frame(ptr_frame_info);
 		return -1;
 	}
-
 	return 0;
 }
 
@@ -306,13 +436,25 @@ void init_free_list()
 //		map_frame(ptr_page_directory,ptr_frame_info,(uint32)((char*)hardlimit+PAGE_SIZE),PERM_WRITEABLE);
 //		//---
 
-	    struct PageInfo* p_alloc = (struct PageInfo*)(ptr_page_directory);
+		struct PageInfo p_alloc;
+		p_alloc .is_first_addr =1;
+		p_alloc .start_page_va =(uint32)((char*)hardlimit + PAGE_SIZE);
+		p_alloc . end_page_va = KERNEL_HEAP_MAX - PAGE_SIZE;
+		p_alloc .number_of_pages =(KERNEL_HEAP_MAX-(p_alloc.start_page_va)) / PAGE_SIZE;
+		p_alloc .is_free =1;
+
+
+		pages_arr[0]=p_alloc;
+
+
+
+	    /*struct PageInfo* p_alloc = (struct PageInfo*)(ptr_page_directory);
 	    //round down in any of these?
 	    p_alloc -> start_page_va = (uint32)((char*)hardlimit + PAGE_SIZE);
 	    p_alloc -> end_page_va = KERNEL_HEAP_MAX - PAGE_SIZE;
 	    p_alloc -> number_of_pages = (KERNEL_HEAP_MAX-(p_alloc->start_page_va)) / PAGE_SIZE;
 
-		LIST_INSERT_HEAD(&free_page_list,p_alloc);
+		LIST_INSERT_HEAD(&free_page_list,p_alloc);*/
 }
 
 
@@ -397,6 +539,9 @@ void merge_freeList(void* va, int num_of_pages)
 		else LIST_INSERT_AFTER(&free_page_list,new_free_Page,prev_free_block);
 	}
 
+	int my_abs(int x) {
+	    return x >= 0 ? x : -x;
+	}
 
 //
 //	struct PageInfo* free_Page;
