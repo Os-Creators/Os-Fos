@@ -190,26 +190,52 @@ void kfree(void* virtual_address)
 
 unsigned int kheap_virtual_address(unsigned int physical_address)
 {
-	//[PROJECT'24.MS2] [KERNEL HEAP] kheap_virtual_address
-	// Write your code here, remove the panic and write your code
-	panic("kheap_virtual_address() is not implemented yet...!!");
+	 // Assume there's a predefined offset or base address for virtual heap memory.
+	    // For example, if `KERNEL_HEAP_BASE` is the start of the kernel's virtual address heap,
+	    // and `PHYSICAL_HEAP_BASE` is the start of the corresponding physical memory.
+	// lamiaa 2022170597
 
-	//return the virtual address corresponding to given physical_address
-	//refer to the project presentation and documentation for details
+	    unsigned int offset_lm597 = KERNEL_HEAP_START - KERNEL_BASE;
+	    unsigned int HEAP_SIZE_lm597 = KERNEL_HEAP_MAX - KERNEL_HEAP_START;
 
-	//EFFICIENT IMPLEMENTATION ~O(1) IS REQUIRED ==================
+	    if (physical_address >= KERNEL_BASE &&
+	        physical_address < KERNEL_BASE + HEAP_SIZE_lm597) {
+
+	        return physical_address + offset_lm597;
+	    }
+
+	    return 0;
 }
 
 unsigned int kheap_physical_address(unsigned int virtual_address)
 {
-	//[PROJECT'24.MS2] [KERNEL HEAP] kheap_physical_address
-	// Write your code here, remove the panic and write your code
-	panic("kheap_physical_address() is not implemented yet...!!");
+    if (virtual_address < KERNEL_HEAP_START || virtual_address >= KERNEL_HEAP_MAX) {
+        return 0;
+    }
 
-	//return the physical address corresponding to given virtual_address
-	//refer to the project presentation and documentation for details
 
-	//EFFICIENT IMPLEMENTATION ~O(1) IS REQUIRED ==================
+    uint32 pd_index_lm597 = (virtual_address >> 22) & 0x3FF;
+    uint32 pt_index_lm597 = (virtual_address >> 12) & 0x3FF;
+    uint32 offset_lm597 = virtual_address & 0xFFF;
+    uint32 *page_directory_lm597 = (uint32 *)vpd;
+    uint32 *page_table_lm597;
+
+    if (page_directory_lm597[pd_index_lm597] & 0x1) {
+
+        page_table_lm597 = (uint32 *)((page_directory_lm597[pd_index_lm597] & ~0xFFF) + KERNEL_BASE);
+    } else {
+
+        return 0;
+    }
+
+    if (page_table_lm597[pt_index_lm597] & 0x1) {
+
+        uint32 physical_address_lm597 = (page_table_lm597[pt_index_lm597] & ~0xFFF) | offset_lm597;
+        return physical_address_lm597;
+    } else {
+
+        return 0;
+    }
 }
 
 
