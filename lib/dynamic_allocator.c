@@ -221,7 +221,6 @@ void *alloc_block_FF(uint32 size)
 			if (prev_segment == (void*)-1)
 			{
 				return NULL;
-
 			}
 			else
 			{
