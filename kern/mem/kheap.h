@@ -75,6 +75,11 @@ struct BusyPageInfo_List busy_page_list;//list is unordered
 //=================================================================================//
 //============================== OUR HELPER FUNCTIONS ===================================//
 //=================================================================================//
+void* kleave(void* va,uint32 size,uint32 new_size);
+void* page_to_block_allocator(void* va,uint32 size,uint32 new_size);
+void* block_to_page_allocator(void* va,uint32 size,uint32 new_size);
+
+
 int allocate_page_to_frame(void * page_VA);
 void init_free_list();
 int numOfAllocPages_busyList(void* va);

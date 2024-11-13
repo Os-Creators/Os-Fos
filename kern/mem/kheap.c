@@ -426,15 +426,85 @@ void *krealloc(void *virtual_address, uint32 new_size)
 {
 	//[PROJECT'24.MS2 BONUS2] Kernel Heap Realloc
 	// Write your code here, remove the panic and write your code
-	return NULL;
-	panic("krealloc() is not implemented yet...!!");
+	//return NULL;
+	//panic("krealloc() is not implemented yet...!!");
+
+	uint32 pageIndex = ((uint32)virtual_address - ((uint32)hardlimit+PAGE_SIZE))/PAGE_SIZE;
+	uint32 num_of_pages = pages_arr[pageIndex].number_of_pages;
+
+	uint32 old_size = num_of_pages * PAGE_SIZE ;
+
+	if((uint32)virtual_address >= KERNEL_HEAP_START && (uint32*)virtual_address <= hardlimit)
+	{
+		//in block allocator
+		if(new_size <= DYN_ALLOC_MAX_BLOCK_SIZE){
+			return realloc_block_FF(virtual_address,new_size);
+
+		}else{
+			//move to page allocator
+			return block_to_page_allocator;
+
+		}
+
+	}
+	if((uint32*)virtual_address >= (uint32*)((char*)hardlimit+PAGE_SIZE) && (uint32)virtual_address <= KERNEL_HEAP_MAX)
+	{
+		//in page allocator
+		if(new_size <= DYN_ALLOC_MAX_BLOCK_SIZE){
+			//move to block allocator
+			return page_to_block_allocator(virtual_address,old_size,new_size);
+		}else{
+			return kleave(virtual_address,old_size,new_size);
+
+		}
+
+	}
+	return NULL; //if nothing of the above
 }
 
 
 //=================================================================================//
 //============================== OUR HELPER FUNCTIONS =============================//
 //=================================================================================//
+void* kleave(void* va,uint32 size,uint32 new_size)
+{
+	void* new_va = (void*)kmalloc(new_size);
 
+	if(new_va !=NULL){
+		if(new_size >= size)
+			memcpy(new_va, va, size);
+		else
+			memcpy(new_va, va, new_size);
+
+		kfree(va);
+	}
+	return new_va;
+
+}
+void* page_to_block_allocator(void* va,uint32 size,uint32 new_size)
+{
+	void* new_va = (void*)alloc_block_FF(new_size);
+
+	if(new_va !=NULL){
+		memcpy(new_va, va, new_size); //newsize because old size will be bigger than the block we allocated;
+
+		kfree(va);
+	}
+	return new_va;
+
+}
+void* block_to_page_allocator(void* va,uint32 size,uint32 new_size)
+{
+	void* new_va = (void*)kmalloc(new_size);
+
+	if(new_va !=NULL){
+		memcpy(new_va, va, size); //size because old newsize will be bigger than the block we allocated;
+
+		free_block(va);
+	}
+	return new_va;
+
+}
 int allocate_page_to_frame(void * page_VA){
 
 	//[1] Check if the page exists or not?
