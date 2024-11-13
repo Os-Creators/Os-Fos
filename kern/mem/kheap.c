@@ -116,42 +116,40 @@ void* kmalloc(unsigned int size)
 		return NULL;
 	}
 	uint32 num_of_pages = ROUNDUP(size , PAGE_SIZE)/ PAGE_SIZE; //check calculation
-	//cprintf("free list size = %d , first element start address %p , first element num pages: %d , requested num of pages %d\n",LIST_SIZE(&free_page_list),LIST_FIRST(&free_page_list)->start_page_va,LIST_FIRST(&free_page_list)->number_of_pages,num_of_pages);
 
 	bool page_found = 0;
 	uint32 page_allocator_pages = (KERNEL_HEAP_MAX-((uint32)hardlimit + PAGE_SIZE))/PAGE_SIZE;
-	//cprintf("page allocator %d , request %d",page_allocator_pages,num_of_pages) ;
+
 	if(num_of_pages > page_allocator_pages)return NULL;
 
 	uint32 return_addr;
 	for(int i =0 ; i < page_allocator_pages-1 ; i++){
 		if(pages_arr[i].is_free && pages_arr[i].number_of_pages >= num_of_pages){
 
-			//cprintf("i = %d , va %p ,prev size %d ,prev first %p \n",i,(uint32*)pages_arr[i].start_page_va,pages_arr[i-1].number_of_pages,(uint32*)(pages_arr[i - pages_arr[i-1].number_of_pages].start_page_va));
-
 			if(pages_arr[i].number_of_pages > num_of_pages){
-
+				//split
 				uint32 splited_free_page_index = (i + num_of_pages);
 
+				//(like header)
 				pages_arr[splited_free_page_index].number_of_pages = pages_arr[i].number_of_pages -num_of_pages;
 				pages_arr[splited_free_page_index].is_free = 1;
 				pages_arr[splited_free_page_index].start_page_va = ((uint32)hardlimit + PAGE_SIZE) + (splited_free_page_index*PAGE_SIZE);
 				pages_arr[splited_free_page_index].is_first_addr = 1;
 
-
+				//(like footer)
 				pages_arr[splited_free_page_index+pages_arr[splited_free_page_index].number_of_pages-1].number_of_pages = pages_arr[i].number_of_pages -num_of_pages;
 				pages_arr[splited_free_page_index+pages_arr[splited_free_page_index].number_of_pages-1].is_free = 1;
 
 			}
 
-
+			//like header of the allocated block
 			pages_arr[i].is_free = 0;
 			pages_arr[i].number_of_pages = num_of_pages;
 			pages_arr[i].start_page_va = ((uint32)hardlimit + PAGE_SIZE) + (i*PAGE_SIZE);
 			return_addr = pages_arr[i].start_page_va;
 			pages_arr[i].is_first_addr = 1;
 
-
+			//like footer
 			pages_arr[i+num_of_pages-1].is_last_addr =1;
 			pages_arr[i+num_of_pages-1].is_free = 0;
 			pages_arr[i+num_of_pages-1].number_of_pages=num_of_pages;
@@ -171,8 +169,7 @@ void* kmalloc(unsigned int size)
 			break;
 
 		}else{
-//			cprintf("\n i = %d , va %p ,is free%d",i,(uint32*)pages_arr[i].start_page_va,pages_arr[i].is_free);
-//			cprintf("\n i+1 = %d ,i-1 %d",pages_arr[i+1].is_free,pages_arr[i-1].is_free);
+			//jumb
 
 			i = (i + pages_arr[i].number_of_pages) -1;//for loop will increment it again and remove (-1)
 
@@ -261,26 +258,22 @@ void kfree(void* virtual_address)
 	else if((uint32*)virtual_address >= (uint32*)((char*)hardlimit+PAGE_SIZE) && (uint32)virtual_address <= KERNEL_HEAP_MAX)
 	{
 		uint32* va = ROUNDDOWN(virtual_address,PAGE_SIZE);
-		//if(va == (uint32*)pages_arr[0].start_page_va)cprintf("equal");
+
 		uint32 pageIndex = ((uint32)va - ((uint32)hardlimit+PAGE_SIZE))/PAGE_SIZE;
 
 		uint32 num_of_pages = pages_arr[pageIndex].number_of_pages;
-		//cprintf(" index %d ,size %d",pageIndex,num_of_pages);
 
 		if(pages_arr[pageIndex].is_free || !pages_arr[pageIndex].is_first_addr){
 			cprintf("already free Virtual address or not first address in allocated pages...");return;
 		}
 
-		//cprintf("FREEEE :i = %d , va %p ,prev size %d ,prev free? %d ,prev first %p \n",pageIndex,(uint32*)pages_arr[pageIndex].start_page_va,pages_arr[pageIndex-1].number_of_pages,pages_arr[pageIndex - pages_arr[pageIndex-1].number_of_pages].is_free,(uint32*)(pages_arr[pageIndex - pages_arr[pageIndex-1].number_of_pages].start_page_va));
-
+		//header of this block of pages
 		pages_arr[pageIndex].is_free = 1;
 
+		//footer of this block of pages
 		pages_arr[pageIndex + num_of_pages -1].is_free = 1;
 		pages_arr[pageIndex + num_of_pages -1].number_of_pages = num_of_pages;
 		pages_arr[pageIndex + num_of_pages -1].is_first_addr = 0;
-
-
-		//cprintf(" last index %d ,size %d",pageIndex + num_of_pages -1);
 
 		//un_map the pages
 		uint32 tmp_num_of_pages = num_of_pages;
@@ -290,35 +283,37 @@ void kfree(void* virtual_address)
 			va = (uint32*)((char*)va+ PAGE_SIZE);
 		}
 
-		//uint32 num_of_old_pages = num_of_pages;
+		//before my block is empty
 		if(pageIndex != 0)
 		if(pages_arr[pageIndex-1].is_free){
 			//merge
+
 			//update pageindex to the begin
-			//cprintf("\n merge before");
 			pages_arr[pageIndex].is_first_addr = 0;
 
 			uint32 num_of_old_pages = num_of_pages;
 			 num_of_pages = pages_arr[pageIndex-1].number_of_pages;
 
+			 //page index know is the index of the brevious page
+			 //absolute -> i dont know why function didnt make it right , i am tired
 			int tmppageIndex = (int)(pageIndex - pages_arr[pageIndex-1].number_of_pages);
 			pageIndex = tmppageIndex >= 0 ? tmppageIndex : -tmppageIndex;
 
+			//update data of first page of prev block (header)
 			pages_arr[pageIndex].number_of_pages = num_of_old_pages+num_of_pages;
 
-			pages_arr[pageIndex+num_of_old_pages+num_of_pages-1].number_of_pages = num_of_old_pages+num_of_pages;//updating last page in block of pages
+			//updating last page in all block (prev + curr)
+			pages_arr[pageIndex+num_of_old_pages+num_of_pages-1].number_of_pages = num_of_old_pages+num_of_pages;
 			pages_arr[pageIndex+num_of_old_pages+num_of_pages-1].is_free = 1;
 
 			num_of_pages = pages_arr[pageIndex].number_of_pages;
-//			cprintf(" merge bfr index %d ,size %d",pageIndex,num_of_old_pages+num_of_pages);
-//			cprintf("merged before last index %d\n",pageIndex+num_of_old_pages+num_of_pages-1);
 
 		}
 
+		//after my block of pages is empty
 		if(pageIndex < KERNEL_HEAP_MAX - PAGE_SIZE)
 		if(pages_arr[pageIndex+num_of_pages].is_free){
 			//merge
-			//cprintf("\n merge after ,next page# %d , next size%d\n",pageIndex+num_of_pages,pages_arr[pageIndex+num_of_pages].number_of_pages);
 			pages_arr[pageIndex+num_of_pages].is_first_addr = 0;
 
 
@@ -329,14 +324,8 @@ void kfree(void* virtual_address)
 			pages_arr[pageIndex+pages_arr[pageIndex].number_of_pages-1].number_of_pages = pages_arr[pageIndex].number_of_pages;
 			pages_arr[pageIndex+pages_arr[pageIndex].number_of_pages-1].is_free = 1;
 
-//			cprintf(" merge aftr index %d ,size %d",pageIndex,pages_arr[pageIndex+pages_arr[pageIndex].number_of_pages-1].number_of_pages);
-//			cprintf("merged aftr last index %d\n",pageIndex+pages_arr[pageIndex].number_of_pages-1);
-
 
 		}
-		//if(!not)pages_arr[pageIndex + num_of_pages -1].is_free = 1;
-
-		//cprintf("AFTER FREEEE :i = %d , va %p , size %d , free? %d  \n",pageIndex,(uint32*)pages_arr[pageIndex].start_page_va,pages_arr[pageIndex].number_of_pages,pages_arr[pageIndex].is_free);
 
 		/*/// would he give me an address that in the middle of a free block?
 
