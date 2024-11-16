@@ -65,6 +65,7 @@ struct PageInfo {
 
 //const uint32 page_allocator_pages =(KERNEL_HEAP_MAX-KERNEL_HEAP_START)/PAGE_SIZE;   //(KERNEL_HEAP_MAX-((uint32)hardlimit + PAGE_SIZE))/PAGE_SIZE;
 struct PageInfo pages_arr[(KERNEL_HEAP_MAX-KERNEL_HEAP_START)/PAGE_SIZE];
+uint32 frame_page[1048576];
 
 //=================================================================================//
 //============================== OUR HELPER FUNCTIONS ===================================//
@@ -74,6 +75,7 @@ void* page_to_block_allocator(void* va,uint32 size,uint32 new_size);
 void* block_to_page_allocator(void* va,uint32 size,uint32 new_size);
 
 int allocate_page_to_frame(void * page_VA);
+void deallocate_page_to_frame(void * page_VA);
 void init_free_list();
 
 // not used

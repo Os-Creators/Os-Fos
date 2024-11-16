@@ -95,14 +95,15 @@ void* kmalloc(unsigned int size)
 		return NULL;
 
 	uint32 num_of_pages = ROUNDUP(size , PAGE_SIZE)/ PAGE_SIZE; //check calculation
-	bool page_found = 0;
 	uint32 page_allocator_pages = (KERNEL_HEAP_MAX-((uint32)hardlimit + PAGE_SIZE))/PAGE_SIZE;
 
-	if(num_of_pages > page_allocator_pages)return NULL;
+	if(num_of_pages > page_allocator_pages) return NULL;
 
+	bool page_found = 0;
 	uint32 return_addr;
 
-	for(int i =0 ; i < page_allocator_pages-1 ; i++){
+	for(int i = 0 ; i < page_allocator_pages-1 ; i++){
+
 		if(pages_arr[i].is_free && pages_arr[i].number_of_pages >= num_of_pages){
 
 			if(pages_arr[i].number_of_pages > num_of_pages){
@@ -198,7 +199,7 @@ void kfree(void* virtual_address)
 		uint32 tmp_num_of_pages = num_of_pages;
 		while(tmp_num_of_pages--)
 		{
-			unmap_frame(ptr_page_directory, (uint32) va);
+			deallocate_page_to_frame(va);
 			va = (uint32*)((char*)va+ PAGE_SIZE);
 		}
 
@@ -254,35 +255,17 @@ void kfree(void* virtual_address)
 
 unsigned int kheap_virtual_address(unsigned int physical_address){
 
-       uint32 frame_number = physical_address & ~0xFFF;
+
+	struct FrameInfo* frame=to_frame_info(physical_address);
+    uint32 frame_number = to_frame_number(frame);
     uint32 offset = physical_address & 0xFFF;
-       uint32 *page_directory = (uint32 *)vpd;
 
-     for (uint32 pd_index = KERNEL_HEAP_START >> 22; pd_index < (KERNEL_HEAP_MAX >> 22); pd_index++) {
-             uint32 pde = page_directory[pd_index];
-        if (!(pde & 0x1)) {
+    if(frame==NULL || frame->references==0)
+    	return 0;
 
-            continue;
-        }
+    uint32 va = (frame_page[frame_number]<<12)|offset;
 
-              uint32 *page_table = (uint32 *)((pde & ~0xFFF) + KERNEL_BASE);
-
-              for (uint32 pt_index = 0; pt_index < 1024; pt_index++) {
-            uint32 pte = page_table[pt_index];
-            if (!(pte & 0x1)) {
-                             continue;
-            }
-
-                      uint32 physical_frame_address = pte & ~0xFFF;
-
-                     if (physical_frame_address == frame_number) {
-                              uint32 virtual_address = (pd_index << 22) | (pt_index << 12) | offset;
-                return virtual_address;
-            }
-        }
-    }
-
-     return 0;
+    return va;
 }
 
 unsigned int kheap_physical_address(unsigned int virtual_address)
@@ -430,18 +413,31 @@ int allocate_page_to_frame(void * page_VA){
 		free_frame(ptr_frame_info);
 		return -1;
 	}
+
+	frame_page[to_frame_number(ptr_frame_info)]=(uint32)page_VA>>12;
+
 	return 0;
+}
+
+void deallocate_page_to_frame(void * page_VA){
+
+	uint32 *ptr_page_table;
+	struct FrameInfo* ptr_frame_info=get_frame_info(ptr_page_directory,(uint32)page_VA,&ptr_page_table);
+
+	frame_page[to_frame_number(ptr_frame_info)]=-1;
+
+	unmap_frame(ptr_page_directory, (uint32) page_VA);
 }
 
 
 void init_free_list()
 {
 		struct PageInfo p_alloc;
-		p_alloc .is_first_addr =1;
-		p_alloc .start_page_va =(uint32)((char*)hardlimit + PAGE_SIZE);
-		p_alloc . end_page_va = KERNEL_HEAP_MAX - PAGE_SIZE;
-		p_alloc .number_of_pages =(KERNEL_HEAP_MAX-(p_alloc.start_page_va)) / PAGE_SIZE;
-		p_alloc .is_free =1;
+		p_alloc.is_first_addr =1;
+		p_alloc.start_page_va =(uint32)((char*)hardlimit + PAGE_SIZE);
+		p_alloc.end_page_va = KERNEL_HEAP_MAX - PAGE_SIZE;
+		p_alloc.number_of_pages =(KERNEL_HEAP_MAX-(p_alloc.start_page_va)) / PAGE_SIZE;
+		p_alloc.is_free =1;
 
 		pages_arr[0]=p_alloc;
 
