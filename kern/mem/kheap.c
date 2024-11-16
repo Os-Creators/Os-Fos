@@ -252,23 +252,37 @@ void kfree(void* virtual_address)
 
 }
 
-unsigned int kheap_virtual_address(unsigned int physical_address)
-{
-	 // Assume there's a predefined offset or base address for virtual heap memory.
-	 // For example, if `KERNEL_HEAP_BASE` is the start of the kernel's virtual address heap,
-	 // and `PHYSICAL_HEAP_BASE` is the start of the corresponding physical memory.
-	 // lamiaa 2022170597
+unsigned int kheap_virtual_address(unsigned int physical_address){
 
-	    unsigned int offset_lm597 = KERNEL_HEAP_START - KERNEL_BASE;
-	    unsigned int HEAP_SIZE_lm597 = KERNEL_HEAP_MAX - KERNEL_HEAP_START;
+       uint32 frame_number = physical_address & ~0xFFF;
+    uint32 offset = physical_address & 0xFFF;
+       uint32 *page_directory = (uint32 *)vpd;
 
-	    if (physical_address >= KERNEL_BASE &&
-	        physical_address < KERNEL_BASE + HEAP_SIZE_lm597) {
+     for (uint32 pd_index = KERNEL_HEAP_START >> 22; pd_index < (KERNEL_HEAP_MAX >> 22); pd_index++) {
+             uint32 pde = page_directory[pd_index];
+        if (!(pde & 0x1)) {
 
-	        return physical_address + offset_lm597;
-	    }
+            continue;
+        }
 
-	    return 0;
+              uint32 *page_table = (uint32 *)((pde & ~0xFFF) + KERNEL_BASE);
+
+              for (uint32 pt_index = 0; pt_index < 1024; pt_index++) {
+            uint32 pte = page_table[pt_index];
+            if (!(pte & 0x1)) {
+                             continue;
+            }
+
+                      uint32 physical_frame_address = pte & ~0xFFF;
+
+                     if (physical_frame_address == frame_number) {
+                              uint32 virtual_address = (pd_index << 22) | (pt_index << 12) | offset;
+                return virtual_address;
+            }
+        }
+    }
+
+     return 0;
 }
 
 unsigned int kheap_physical_address(unsigned int virtual_address)
