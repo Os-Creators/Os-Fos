@@ -70,5 +70,7 @@ void __page_fault_handler_with_buffering(struct Env * curenv, uint32 fault_va);
 void dyn_alloc_local_scope_method(struct Env * curenv, uint32 fault_va);
 void page_fault_handler(struct Env * curenv, uint32 fault_va);
 void table_fault_handler(struct Env * curenv, uint32 fault_va);
+int is_heap_address(uint32 address);
+int is_stack_address(uint32 address);
 
 #endif /* KERN_FAULT_HANDLER_H_ */
