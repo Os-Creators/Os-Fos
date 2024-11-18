@@ -398,7 +398,9 @@ int map_frame(uint32 *ptr_page_directory, struct FrameInfo *ptr_frame_info, uint
 	uint32 pte_available_bits = ptr_page_table[PTX(virtual_address)] & PERM_AVAILABLE;
 	ptr_page_table[PTX(virtual_address)] = CONSTRUCT_ENTRY(physical_address , pte_available_bits | perm | PERM_PRESENT);
 	/*********************************************************************************/
-	return 0;
+
+	 frame_page[to_frame_number(ptr_frame_info)]=(uint32)virtual_address>>12;
+	 return 0;
 }
 
 //
@@ -468,6 +470,7 @@ void unmap_frame(uint32 *ptr_page_directory, uint32 virtual_address)
 		/*********************************************************************************/
 
 		tlb_invalidate(ptr_page_directory, (void *)virtual_address);
+		frame_page[to_frame_number(ptr_frame_info)]=-1;
 	}
 }
 

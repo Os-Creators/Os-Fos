@@ -455,9 +455,6 @@ int allocate_page_to_frame(void * page_VA){
 		free_frame(ptr_frame_info);
 		return -1;
 	}
-
-	frame_page[to_frame_number(ptr_frame_info)]=(uint32)page_VA>>12;
-
 	return 0;
 }
 
@@ -465,9 +462,6 @@ void deallocate_page_to_frame(void * page_VA){
 
 	uint32 *ptr_page_table;
 	struct FrameInfo* ptr_frame_info=get_frame_info(ptr_page_directory,(uint32)page_VA,&ptr_page_table);
-
-	frame_page[to_frame_number(ptr_frame_info)]=-1;
-
 	unmap_frame(ptr_page_directory, (uint32) page_VA);
 }
 

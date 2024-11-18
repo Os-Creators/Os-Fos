@@ -268,19 +268,16 @@ void page_fault_handler(struct Env * faulted_env, uint32 fault_va)
 	 {
    	   if (is_stack_address(fault_va) == 1 || is_heap_address(fault_va) == 1)
 	   {
-   		 frame_page[to_frame_number(Frame_Info)]=(uint32)fault_va>>12;
-		 map_frame(faulted_env->env_page_directory,Frame_Info,fault_va,PERM_WRITEABLE | PERM_USER);
+   		 map_frame(faulted_env->env_page_directory,Frame_Info,fault_va,PERM_WRITEABLE | PERM_USER);
 	   }
 	  else
 	   {
 		  env_page_ws_invalidate(faulted_env,fault_va);
-		  frame_page[to_frame_number(Frame_Info)]=-1;
-		  env_exit();
+	      env_exit();
 	   }
 	 }
 	 else
 	 {
-		 frame_page[to_frame_number(Frame_Info)]=(uint32)fault_va>>12;
 		 map_frame(faulted_env->env_page_directory,Frame_Info,fault_va,PERM_WRITEABLE | PERM_USER);
 	 }
    }
