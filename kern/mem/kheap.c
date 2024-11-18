@@ -172,7 +172,7 @@ void kfree(void* virtual_address)
 	//block allocator
 	if((uint32)virtual_address >= KERNEL_HEAP_START && (uint32*)virtual_address <= hardlimit)
 	{
-		/// va in the middle of the block?
+		// va in the middle of the block?
 		free_block(virtual_address);
 	}
 	//page allocator
@@ -322,53 +322,97 @@ void *krealloc(void *virtual_address, uint32 new_size)
 	//return NULL;
 	//panic("krealloc() is not implemented yet...!!");
 
+	if(virtual_address==NULL)
+		return kmalloc(new_size);
+
+	if(new_size==0)
+		kfree(virtual_address);  //return what?
+
+
 	uint32 pageIndex = ((uint32)virtual_address - ((uint32)hardlimit+PAGE_SIZE))/PAGE_SIZE;
 	uint32 num_of_pages = pages_arr[pageIndex].number_of_pages;
-
-	uint32 old_size = num_of_pages * PAGE_SIZE ;
+	uint32 old_size = num_of_pages * PAGE_SIZE;
 
 	if((uint32)virtual_address >= KERNEL_HEAP_START && (uint32*)virtual_address <= hardlimit)
 	{
 		//in block allocator
 		if(new_size <= DYN_ALLOC_MAX_BLOCK_SIZE){
 			return realloc_block_FF(virtual_address,new_size);
-
 		}else{
-			//move to page allocator
-			return block_to_page_allocator;
-
+			return block_to_page_allocator(virtual_address,old_size,new_size);// old size is not valid
 		}
-
 	}
+
 	if((uint32*)virtual_address >= (uint32*)((char*)hardlimit+PAGE_SIZE) && (uint32)virtual_address <= KERNEL_HEAP_MAX)
 	{
+		virtual_address = ROUNDDOWN(virtual_address,PAGE_SIZE);// double check
+
 		//in page allocator
 		if(new_size <= DYN_ALLOC_MAX_BLOCK_SIZE){
-			//move to block allocator
 			return page_to_block_allocator(virtual_address,old_size,new_size);
 		}else{
-			return kleave(virtual_address,old_size,new_size);
+
+			new_size = ROUNDUP(new_size,PAGE_SIZE);// double check
+
+			// equal case
+			if(old_size==new_size) return virtual_address;
+
+			// increasing case
+			if(old_size<new_size)
+			{
+				uint32 extraPagesReq=(new_size-old_size)/PAGE_SIZE;
+
+				// not extend  [ not free OR not enough free space infront of me]
+				if(!pages_arr[pageIndex + num_of_pages -1].is_free
+						|| pages_arr[pageIndex + num_of_pages -1].number_of_pages < extraPagesReq)
+				{
+					return kleave(virtual_address,old_size,new_size);
+				}
+				// extend
+				else
+				{
+					uint32* nxt_freeBlock_va=(uint32*)pages_arr[pageIndex + num_of_pages -1].start_page_va;
+					uint32* Split_va=(uint32*)((char*)virtual_address+new_size);
+					// set new footer for the current block
+
+					// allocate from the next free block
+
+					// free the unused remains in the next free block
+
+				}
+
+			}
+
+			// decreasing case
+			if(old_size<new_size)
+			{
+				uint32* remains_va=(uint32*)((char*)virtual_address+new_size);
+
+				// set new footer for the current block
+
+				// set new header and footer for the the remains that will be freed (make it bust sp we can use kfree on it)
+
+				// let kfree do the merging
+
+				return virtual_address;
+			}
 
 		}
-
 	}
-	return NULL; //if nothing of the above
+
+	return NULL;
 }
 
 
 //=================================================================================//
 //============================== OUR HELPER FUNCTIONS =============================//
 //=================================================================================//
-void* kleave(void* va,uint32 size,uint32 new_size)
+void* kleave(void* va,uint32 size,uint32 new_size) // sizes in bytes
 {
 	void* new_va = (void*)kmalloc(new_size);
 
 	if(new_va !=NULL){
-		if(new_size >= size)
-			memcpy(new_va, va, size);
-		else
-			memcpy(new_va, va, new_size);
-
+		memcpy(new_va, va, size);
 		kfree(va);
 	}
 	return new_va;
@@ -380,7 +424,6 @@ void* page_to_block_allocator(void* va,uint32 size,uint32 new_size)
 
 	if(new_va !=NULL){
 		memcpy(new_va, va, new_size); //new size because old size will be bigger than the block we allocated;
-
 		kfree(va);
 	}
 	return new_va;
@@ -392,7 +435,6 @@ void* block_to_page_allocator(void* va,uint32 size,uint32 new_size)
 
 	if(new_va !=NULL){
 		memcpy(new_va, va, size); //size because old newsize will be bigger than the block we allocated;
-
 		free_block(va);
 	}
 	return new_va;
