@@ -339,7 +339,7 @@ void *krealloc(void *virtual_address, uint32 new_size)
 		if(new_size <= DYN_ALLOC_MAX_BLOCK_SIZE){
 			return realloc_block_FF(virtual_address,new_size);
 		}else{
-			return block_to_page_allocator(virtual_address,old_size,new_size);// old size is not valid
+			return block_to_page_allocator(virtual_address,get_block_size(virtual_address)-8,new_size);// old size is not valid
 		}
 	}
 
