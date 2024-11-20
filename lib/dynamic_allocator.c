@@ -7,7 +7,7 @@
 #include <inc/assert.h>
 #include <inc/string.h>
 #include "../inc/dynamic_allocator.h"
-
+//#include "../kern/mem/kheap.h"
 
 //==================================================================================//
 //============================== GIVEN FUNCTIONS ===================================//
@@ -176,6 +176,7 @@ void *alloc_block_FF(uint32 size)
 				uint32 da_start = (uint32)sbrk(ROUNDUP(required_size, PAGE_SIZE)/PAGE_SIZE);
 				uint32 da_break = (uint32)sbrk(0);
 				initialize_dynamic_allocator(da_start, da_break - da_start);
+				//(uint32*) (da_start +  (da_break - da_start) - sizeof(int));
 
 			}
 
@@ -211,43 +212,60 @@ void *alloc_block_FF(uint32 size)
 			}
 		}
 
-		if ( lfirst597fitblock == NULL) {
+		if(lfirst597fitblock == NULL)
+		{
+			int num_of_pages=ROUNDUP(size_needed_by_blocks597, PAGE_SIZE)/PAGE_SIZE;
+			void* prev_segment = sbrk(num_of_pages);
 
-			//see ROUNDUP -> sprk-----------------
-			lfirst597fitblock = (struct BlockElement *)sbrk(ROUNDUP(size_needed_by_blocks597 + sizeof( lfirst597fitblock), PAGE_SIZE));
-			if ( lfirst597fitblock == (void *)-1) {
+
+			if (prev_segment == (void*)-1)
+			{
 				return NULL;
+			}
+			else
+			{
+				 uint32 increment = num_of_pages * PAGE_SIZE;
+				 uint32* end_block = (uint32*)((char*)prev_segment + increment-4);
+				 //cprintf("2");
+				 *(end_block) = 1;
+				 //cprintf("3");
+
+				 set_block_data(prev_segment,increment,0);
+				 free_block(prev_segment);
+
+				 return alloc_block_FF(size);
 			}
 
 		   //*((uint32 *) mfirst597fitblock) = size_needed_by_blocks;
-			//mfirst597fitblock = (struct BlockElement *)((char *) mfirst597fitblock + sizeof(uint32));
-		} else {
-		   uint32 remaining_size55 = lfirst597fitblocksize - size_needed_by_blocks597;
 
-		   //we dont have to check if after me is empty or not , because it will never be (if it was it would be already merged before)
-
-		   //block fits and have more
-		   if (remaining_size55 >= (DYN_ALLOC_MIN_BLOCK_SIZE + sizeof(uint32) + sizeof(uint32))/*16*/) {
-			   //no fragment
-			   struct BlockElement *new_block55 = (struct BlockElement *)((char *) lfirst597fitblock + size_needed_by_blocks597);
-
-			   set_block_data(new_block55, remaining_size55, 0);
-
-			   //free_block(new_block);
-		       LIST_INSERT_AFTER(&freeBlocksList,lfirst597fitblock , new_block55);
-		       LIST_REMOVE(&freeBlocksList, lfirst597fitblock);
-
-
-		       set_block_data( lfirst597fitblock,size_needed_by_blocks597,1);
-
-		   }else{
-			   //fragment
-			   set_block_data(lfirst597fitblock, lfirst597fitblocksize, 1);
-			   LIST_REMOVE(&freeBlocksList, lfirst597fitblock);
-		   }
-
-
+		   //mfirst597fitblock = (struct BlockElement *)((char *) mfirst597fitblock + sizeof(uint32));
 		}
+
+	   uint32 remaining_size55 = lfirst597fitblocksize - size_needed_by_blocks597;
+
+	   //we dont have to check if after me is empty or not , because it will never be (if it was it would be already merged before)
+
+	   //block fits and have more
+	   if (remaining_size55 >= (DYN_ALLOC_MIN_BLOCK_SIZE + sizeof(uint32) + sizeof(uint32))/*16*/) {
+		   //no fragment
+		   struct BlockElement *new_block55 = (struct BlockElement *)((char *) lfirst597fitblock + size_needed_by_blocks597);
+
+		   set_block_data(new_block55, remaining_size55, 0);
+
+		   //free_block(new_block);
+		   LIST_INSERT_AFTER(&freeBlocksList,lfirst597fitblock , new_block55);
+		   LIST_REMOVE(&freeBlocksList, lfirst597fitblock);
+
+
+		   set_block_data( lfirst597fitblock,size_needed_by_blocks597,1);
+
+	   }else{
+		   //fragment
+		   set_block_data(lfirst597fitblock, lfirst597fitblocksize, 1);
+		   LIST_REMOVE(&freeBlocksList, lfirst597fitblock);
+	   }
+
+
 		//cprintf("header in alloc. Actual addr H:%d H2:%p\n", *((uint32*)mfirst597fitblock-1), (uint32*)(mfirst597fitblock-4));
 
 		return lfirst597fitblock;
@@ -387,6 +405,12 @@ void free_block(void *va)
         return;
     }
 
+////////////
+	if(get_block_size(va)==0){
+		 cprintf("The virtual address is already free or it is a BEGIN/END block");
+		return;
+	}
+///////////
     uint32 size_of_prev_block_mlf = get_block_size((uint32 *)(va - sizeof(int)));//by footer, get_block_size will minus another 4byte
 	struct BlockElement* brev_block_addr_mlf = (struct BlockElement *)((uint32 *)(va - size_of_prev_block_mlf));//footer of prev block
 
@@ -431,168 +455,275 @@ void free_block(void *va)
 //=========================================
 void *realloc_block_FF(void* va, uint32 new_size)
 {
-	/*PLEASE NOTICE that new_size does not include meta data (header,footer) , shimaa*/
-		//[2] Test realloc by passing size = 0. It should call free //return null
-		//test calling it with va & ZERO
+	// corner cases
 
-		if(new_size == 0 && va != NULL){
+	    if(new_size == 0 && va == NULL){
+			return NULL;
+		}
+
+	    if(new_size != 0 && va == NULL){
+	    	return alloc_block_FF(new_size);
+		}
+
+		if(new_size==0 && va != NULL){
+				free_block(va);
+				return NULL;
+		}
+
+		// new size is same as current size
+		/*PLEASE NOTICE that new_size does not include meta data (header,footer) , shimaa*/
+		uint32 curr_size_metadata=get_block_size(va);
+
+		if(new_size == curr_size_metadata-8){
+			return va;
+		}
+
+		// update newsize
+
+		if(new_size < 8) new_size=8; // min 16
+		else if(new_size&1) new_size++;  //odd case X
+
+		/////////////////////////
+		void* leave(void* va,uint32 size,uint32 new_size)
+		{
+			void* new_va = (void*)alloc_block_FF(new_size);
+
+			if(new_va !=NULL){
+			memcpy(new_va, va, size);  //without meta data
+			cprintf("va in realloc after %p",va);
+
+			set_block_data(va, size+8, 0); // should remove
 			free_block(va);
-			return NULL;
+		    cprintf("here");
+			}
+			return new_va;
+
 		}
-		//test calling it with NULL & ZERO
-		if(new_size == 0 && va == NULL){
-			return NULL;
-		}
+		/////////////////////////
 
-		//[1] Test calling realloc with VA = NULL. It should call alloc
-		/* Try to allocate set of blocks with different sizes*/
-		/* Try to allocate a block with a size equal to the size of the first existing free block*/
+		void* next_block_addr = va+curr_size_metadata;
+		uint32 next_size_metadata=get_block_size(next_block_addr);
 
-		if(va == NULL){
-			return alloc_block_FF(new_size);
-		}
+		// increasing size
 
-		bool IS_FIT = 1;
-		uint32 block_size = get_block_size(va);
-		uint32 all_new_size = ROUNDUP(new_size + 8, 2);
-		if (all_new_size % 2 != 0) all_new_size++; //ensure it's multiple of 2
+		if(new_size > curr_size_metadata-8)
+		{
+			if(next_size_metadata == 0 || !is_free_block(next_block_addr)){
+				return leave(va,curr_size_metadata-8,new_size);
+			}
 
-		struct BlockElement* next_block_addr = (struct BlockElement*)(va + (block_size - 4) + 4);//the addr of the next block , are you sure about datatypes?
-		struct BlockElement* new_next_block_addr = (struct BlockElement*)(va + (all_new_size-4) + 4);//the addr of the next block after reallocation ,after header, are you sure about datatypes?
+			uint32 extra_size=new_size-curr_size_metadata-8;
 
-		//[]Test if that block is the last block in heap ..shimaa -> which is [5] in test
-		if(get_block_size(next_block_addr) == 0 && !is_free_block(next_block_addr)){
-			return alloc_block_FF(new_size);
-			//sbrk(the_extra_size/(4*1024));
-			//return NULL;
-		}
+			// not extend
 
-
-		if(all_new_size > block_size) {
-			//[3] Test realloc with increased sizes
-			uint32 the_extra_size = all_new_size - block_size;//the difference between new size and old size
-
-
-			uint32 next_block_size = get_block_size(next_block_addr);
-
-
-
-			if(is_free_block(next_block_addr)) {
-
-				if(the_extra_size < next_block_size) {
-					//[3.1] reallocate in same place (NO relocate - split)(shimaa:will take part of next block)
-					//check return address
-					//check the new address of the next free block,shimaa
-					uint32 the_remaining_size = next_block_size-the_extra_size;//the remaining_size in free block after taking from it to our block
-
-					if(the_remaining_size >= 16) {
-
-						set_block_data(va, all_new_size, 1);
-						set_block_data(new_next_block_addr, the_remaining_size, 0);
-
-
-						free_block(new_next_block_addr);
-						//LIST_INSERT_AFTER(&freeBlocksList, next_block_addr,new_next_block_addr);
-					}
+			if(extra_size > next_size_metadata)
+			{
+				return leave(va,curr_size_metadata-8,new_size);
+			}
+			// extend
+			else
+			{
+					uint32 remains = curr_size_metadata + next_size_metadata - (new_size+8);
+					if(remains >= 16) {
+						set_block_data(va, new_size+8, 1);
+						set_block_data(va+new_size+8, remains, 0);
+						free_block(va+new_size+8);
+				    }
 					else {
-						//fragment
-						//check by nouran
-						set_block_data(va, block_size+next_block_size,1);//will exist internal fragment (free unused mem in block)
+						set_block_data(va, curr_size_metadata + next_size_metadata,1);
 					}
 
-					LIST_REMOVE(&freeBlocksList, next_block_addr);
-					return va;
+					LIST_REMOVE(&freeBlocksList,(struct BlockElement*)next_block_addr);
 
-				}else if(the_extra_size == next_block_size){
-					//[3.2] reallocate in same place (NO relocate - NO split) (shimaa:will take all the next block)
-					set_block_data(va, all_new_size,1);//will exist internal fragment (free unused mem in block)
-					LIST_REMOVE(&freeBlocksList, next_block_addr);
-					return va;
-
-				}else {
-					//reallocate in another place
-					//IS_FIT = 0;
-					//ask raazan how to realloc with data
-					//ask razan will va be void or int or what?
-					uint32* new_va = (uint32*)alloc_block_FF(new_size);
-					uint32 tmp_block_size = block_size - 8;//check
-					uint32* tmp_new_va = new_va;
-					while (tmp_block_size--) {
-						*tmp_new_va++ = *((uint32*)va++);
-					}
-					cprintf("here");
-					return new_va;
-				}
-			}else {
-				uint32* new_va = alloc_block_FF(new_size);
-				uint32 tmp_block_size = block_size - 8;//check
-				uint32* tmp_new_va = new_va;
-				while (tmp_block_size--) {
-					*tmp_new_va++ = *((uint32*)va++);
-				}
-				return new_va;
+				  return va;
 			}
-			/*dont forget in 3.3,3.4 to move with the same content */
-			//[3.3] reallocate in another place (relocate - NO split)shimaa
-			//will change location and take full block
-			//if the size is more than the next free block
-			/*block after ours is free but not enough*/
-			/*block after ours is not free*/
-			//check if the new block we will go to will let remaining size smaller than 16?
-			//check if the new block we will go to will let remaining size greater than 16
-			//[3.4] reallocate in another place (relocate - split)shimaa
-			//will change location and take half block
-			//[3.5] no enough space (NO relocate - NO split)-> search till the end but no space -> return null ,shimaa
 
+		}
+		// decreasing size
+		else
+		{
+			uint32 free_size=curr_size_metadata - (new_size+8);
 
-		}else if (all_new_size < block_size){
-			//shrinking the block and update the free block list
-			//if (all_new_size % 2 != 0) all_new_size++; //ensure it's multiple of 2 ,,already in begin of the code
-			uint32 remainig_size = block_size-all_new_size;
+			if(!is_free_block(next_block_addr)){
 
-			//[4] Test realloc with decreased sizes
-			//[4.0] new size<16
-			//[4.1] next block is full (NO coalesce)
-			 //1.divide the block to [1.full block] [2. free block if it is more than 16]
-			 //2.[Internal Framgmentation]
-			//[4.2] next block is empty (coalesce)shimaa
-				/*divide the block to [1.full block] [2. free block will join to the next free block ,
-				 *  dont forget to update the addr of the beginning of the free block in free block list]*/
-
-			if(all_new_size < 16)
-			{
-				new_next_block_addr = va + 16;
-				remainig_size = block_size -16;
-				all_new_size=16;
-
+			 if(free_size >= 16) { // free block
+			 	set_block_data(va, new_size+8, 1);
+				set_block_data(va+new_size+8, free_size, 0);
+				free_block(va+new_size+8);
+		     }
 			}
-			if(remainig_size>=16)
-			{
-				//merge
-				set_block_data(va, all_new_size , 1);
-				set_block_data(new_next_block_addr,remainig_size,0); //check free implementaion
-
-				free_block(new_next_block_addr);
-
-				//call free or continue coding
-			}else{
-				if(is_free_block(next_block_addr)){
-					//merge with free
-					set_block_data(va, all_new_size , 1);
-					set_block_data(new_next_block_addr,remainig_size+get_block_size(next_block_addr),0);
-					LIST_INSERT_AFTER(&freeBlocksList,next_block_addr , new_next_block_addr);
-					LIST_REMOVE(&freeBlocksList, next_block_addr);
-
-				}
+			else{
+			 	set_block_data(va, new_size+8, 1);
+				set_block_data(va+new_size+8, free_size, 0);
+				free_block(va+new_size+8);
 			}
-			return va;
 
-
-
-		}else {
-			//[6] realloc with the same size
 			return va;
 		}
+
+
+	// /*PLEASE NOTICE that new_size does not include meta data (header,footer) , shimaa*/
+	// 	//[2] Test realloc by passing size = 0. It should call free //return null
+	// 	//test calling it with va & ZERO
+
+	// 	if(new_size == 0 && va != NULL){
+	// 		free_block(va);
+	// 		return NULL;
+	// 	}
+	// 	//test calling it with NULL & ZERO
+	// 	if(new_size == 0 && va == NULL){
+	// 		return NULL;
+	// 	}
+
+	// 	//[1] Test calling realloc with VA = NULL. It should call alloc
+	// 	/* Try to allocate set of blocks with different sizes*/
+	// 	/* Try to allocate a block with a size equal to the size of the first existing free block*/
+
+	// 	if(va == NULL){
+	// 		return alloc_block_FF(new_size);
+	// 	}
+
+	// 	bool IS_FIT = 1;
+	// 	uint32 block_size = get_block_size(va);
+	// 	uint32 all_new_size = ROUNDUP(new_size + 8, 2);
+	// 	if (all_new_size % 2 != 0) all_new_size++; //ensure it's multiple of 2
+
+	// 	struct BlockElement* next_block_addr = (struct BlockElement*)(va + (block_size - 4) + 4);//the addr of the next block , are you sure about datatypes?
+	// 	struct BlockElement* new_next_block_addr = (struct BlockElement*)(va + (all_new_size-4) + 4);//the addr of the next block after reallocation ,after header, are you sure about datatypes?
+
+	// 	//[]Test if that block is the last block in heap ..shimaa -> which is [5] in test
+	// 	if(get_block_size(next_block_addr) == 0 && !is_free_block(next_block_addr)){
+	// 		return alloc_block_FF(new_size);
+	// 		//sbrk(the_extra_size/(4*1024));
+	// 		//return NULL;
+	// 	}
+
+
+	// 	if(all_new_size > block_size) {
+	// 		//[3] Test realloc with increased sizes
+	// 		uint32 the_extra_size = all_new_size - block_size;//the difference between new size and old size
+
+
+	// 		uint32 next_block_size = get_block_size(next_block_addr);
+
+
+
+	// 		if(is_free_block(next_block_addr)) {
+
+	// 			if(the_extra_size < next_block_size) {
+	// 				//[3.1] reallocate in same place (NO relocate - split)(shimaa:will take part of next block)
+	// 				//check return address
+	// 				//check the new address of the next free block,shimaa
+	// 				uint32 the_remaining_size = next_block_size-the_extra_size;//the remaining_size in free block after taking from it to our block
+
+	// 				if(the_remaining_size >= 16) {
+
+	// 					set_block_data(va, all_new_size, 1);
+	// 					set_block_data(new_next_block_addr, the_remaining_size, 0);
+
+
+	// 					free_block(new_next_block_addr);
+	// 					//LIST_INSERT_AFTER(&freeBlocksList, next_block_addr,new_next_block_addr);
+	// 				}
+	// 				else {
+	// 					//fragment
+	// 					//check by nouran
+	// 					set_block_data(va, block_size+next_block_size,1);//will exist internal fragment (free unused mem in block)
+	// 				}
+
+	// 				LIST_REMOVE(&freeBlocksList, next_block_addr);
+	// 				return va;
+
+	// 			}else if(the_extra_size == next_block_size){
+	// 				//[3.2] reallocate in same place (NO relocate - NO split) (shimaa:will take all the next block)
+	// 				set_block_data(va, all_new_size,1);//will exist internal fragment (free unused mem in block)
+	// 				LIST_REMOVE(&freeBlocksList, next_block_addr);
+	// 				return va;
+
+	// 			}else {
+	// 				//reallocate in another place
+	// 				//IS_FIT = 0;
+	// 				//ask raazan how to realloc with data
+	// 				//ask razan will va be void or int or what?
+	// 				uint32* new_va = (uint32*)alloc_block_FF(new_size);
+	// 				uint32 tmp_block_size = block_size - 8;//check
+	// 				uint32* tmp_new_va = new_va;
+	// 				while (tmp_block_size--) {
+	// 					*tmp_new_va++ = *((uint32*)va++);
+	// 				}
+	// 				cprintf("here");
+	// 				return new_va;
+	// 			}
+	// 		}else {
+	// 			uint32* new_va = alloc_block_FF(new_size);
+	// 			uint32 tmp_block_size = block_size - 8;//check
+	// 			uint32* tmp_new_va = new_va;
+	// 			while (tmp_block_size--) {
+	// 				*tmp_new_va++ = *((uint32*)va++);
+	// 			}
+	// 			return new_va;
+	// 		}
+	// 		/*dont forget in 3.3,3.4 to move with the same content */
+	// 		//[3.3] reallocate in another place (relocate - NO split)shimaa
+	// 		//will change location and take full block
+	// 		//if the size is more than the next free block
+	// 		/*block after ours is free but not enough*/
+	// 		/*block after ours is not free*/
+	// 		//check if the new block we will go to will let remaining size smaller than 16?
+	// 		//check if the new block we will go to will let remaining size greater than 16
+	// 		//[3.4] reallocate in another place (relocate - split)shimaa
+	// 		//will change location and take half block
+	// 		//[3.5] no enough space (NO relocate - NO split)-> search till the end but no space -> return null ,shimaa
+
+
+	// 	}else if (all_new_size < block_size){
+	// 		//shrinking the block and update the free block list
+	// 		//if (all_new_size % 2 != 0) all_new_size++; //ensure it's multiple of 2 ,,already in begin of the code
+	// 		uint32 remainig_size = block_size-all_new_size;
+
+	// 		//[4] Test realloc with decreased sizes
+	// 		//[4.0] new size<16
+	// 		//[4.1] next block is full (NO coalesce)
+	// 		 //1.divide the block to [1.full block] [2. free block if it is more than 16]
+	// 		 //2.[Internal Framgmentation]
+	// 		//[4.2] next block is empty (coalesce)shimaa
+	// 			/*divide the block to [1.full block] [2. free block will join to the next free block ,
+	// 			 *  dont forget to update the addr of the beginning of the free block in free block list]*/
+
+	// 		if(all_new_size < 16)
+	// 		{
+	// 			new_next_block_addr = va + 16;
+	// 			remainig_size = block_size -16;
+	// 			all_new_size=16;
+
+	// 		}
+	// 		if(remainig_size>=16)
+	// 		{
+	// 			//merge
+	// 			set_block_data(va, all_new_size , 1);
+	// 			set_block_data(new_next_block_addr,remainig_size,0); //check free implementaion
+
+	// 			free_block(new_next_block_addr);
+
+	// 			//call free or continue coding
+	// 		}else{
+	// 			if(is_free_block(next_block_addr)){
+	// 				//merge with free
+	// 				set_block_data(va, all_new_size , 1);
+	// 				set_block_data(new_next_block_addr,remainig_size+get_block_size(next_block_addr),0);
+	// 				LIST_INSERT_AFTER(&freeBlocksList,next_block_addr , new_next_block_addr);
+	// 				LIST_REMOVE(&freeBlocksList, next_block_addr);
+
+	// 			}
+	// 		}
+	// 		return va;
+
+
+
+	// 	}else {
+	// 		//[6] realloc with the same size
+	// 		return va;
+	// 	}
 
 }
 
@@ -627,3 +758,5 @@ void *delicious_Potato (uint32 potato)
 	salad = tomato + potato;
 	return (void*) salad;
 }
+
+

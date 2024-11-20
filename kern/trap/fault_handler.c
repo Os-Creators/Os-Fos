@@ -11,6 +11,7 @@
 #include <kern/cpu/cpu.h>
 #include <kern/disk/pagefile_manager.h>
 #include <kern/mem/memory_manager.h>
+#include <kern/mem/kheap.h>
 
 //2014 Test Free(): Set it to bypass the PAGE FAULT on an instruction with this length and continue executing the next one
 // 0 means don't bypass the PAGE FAULT
@@ -151,39 +152,24 @@ void fault_handler(struct Trapframe *tf)
 			//TODO: [PROJECT'24.MS2 - #08] [2] FAULT HANDLER I - Check for invalid pointers
 			//(e.g. pointing to unmarked user heap page, kernel or wrong access rights),
 			//your code is here
+		   int permissions= pt_get_page_permissions(faulted_env->env_page_directory,fault_va);
+		   int user_access= permissions & PERM_USER;
+		   int marked_page= permissions & PERM_AVAILABLE;
+		   int read_access= permissions & PERM_WRITEABLE;
+		   int present= permissions & PERM_PRESENT;
 
-
-
-//			 pointing to UNMARKED page in user heap
-//			 pointing to kernel
-//			Exist (present) but with read-only permissions  // env_exit()
-
-       // inline uint32 pt_get_page_permissions(struct Env* ptr_env, uint32 virtual_address )
-	  // ptr_env: pointer to environment that you should work on
-
-
-
-   //uint32 *page_directory=last_faulted_env->env_page_directory; // check it if given
-   int permissions= pt_get_page_permissions(ptr_page_directory,fault_va);
-   int user_access= permissions & PERM_USER;
-   int marked_page= permissions & PERM_AVAILABLE;
-   int Read_access= permissions & PERM_WRITEABLE;
-
-
-   if(user_access!=PERM_USER) // check type
-   {
-      env_exit();
-   }
-   if(marked_page!=PERM_AVAILABLE) // unmarked
-   {
-     env_exit();
-   }
-
-   if(Read_access!=PERM_WRITEABLE) // read
-   {
-     env_exit();
-   }
-
+		   if(!(fault_va>=0 && fault_va<USER_LIMIT) && user_access!=PERM_USER) //User
+		   {
+			  env_exit();
+		   }
+		   if(fault_va>= USER_HEAP_START && fault_va<USER_HEAP_MAX && marked_page!=PERM_AVAILABLE) // unmarked
+		   {
+			 env_exit();
+		   }
+		   if(present==PERM_PRESENT && read_access!=PERM_WRITEABLE) // read
+		   {
+			 env_exit();
+		   }
 			/*============================================================================================*/
 		}
 
@@ -247,6 +233,7 @@ void table_fault_handler(struct Env * curenv, uint32 fault_va)
 void page_fault_handler(struct Env * faulted_env, uint32 fault_va)
 {
 #if USE_KHEAP
+
 		struct WorkingSetElement *victimWSElement = NULL;
 		uint32 wsSize = LIST_SIZE(&(faulted_env->page_WS_list));
 #else
@@ -254,15 +241,47 @@ void page_fault_handler(struct Env * faulted_env, uint32 fault_va)
 		uint32 wsSize = env_page_ws_get_size(faulted_env);
 #endif
 
-	if(wsSize < (faulted_env->page_WS_max_size))
-	{
-		//cprintf("PLACEMENT=========================WS Size = %d\n", wsSize );
-		//TODO: [PROJECT'24.MS2 - #09] [2] FAULT HANDLER I - Placement
-		// Write your code here, remove the panic and write your code
-		panic("page_fault_handler().PLACEMENT is not implemented yet...!!");
-
-		//refer to the project presentation and documentation for details
-	}
+   if(wsSize < (faulted_env->page_WS_max_size))
+   {
+	//cprintf("PLACEMENT=========================WS Size = %d\n", wsSize );
+	//TODO: [PROJECT'24.MS2 - #09] [2] FAULT HANDLER I - Placement
+	// Write your code here, remove the panic and write your code
+	//panic("page_fault_handler().PLACEMENT is not implemented yet...!!");
+    // Functions to check if my page is stack or heap
+	// allocate , map -> ws ele(kmalloc -> alloc,map)
+	 struct WorkingSetElement *new_element = env_page_ws_list_create_element(faulted_env,fault_va);
+	 LIST_INSERT_TAIL(&(faulted_env->page_WS_list), new_element);
+	 uint32 size = LIST_SIZE(&(faulted_env->page_WS_list));
+	 if (size == faulted_env->page_WS_max_size)
+	 {
+	 	 faulted_env->page_last_WS_element = LIST_FIRST(&(faulted_env->page_WS_list));
+	  }
+	  else
+	 {
+	 	 faulted_env->page_last_WS_element = NULL;
+	 }
+	 int status= pf_read_env_page(faulted_env,(void*)fault_va);
+	 uint32 *ptr_page_table;
+	 struct FrameInfo *Frame_Info;
+	 uint32 faulted_page = allocate_frame(&Frame_Info);
+	 if(status==E_PAGE_NOT_EXIST_IN_PF)
+	 {
+   	   if (is_stack_address(fault_va) == 1 || is_heap_address(fault_va) == 1)
+	   {
+   		 map_frame(faulted_env->env_page_directory,Frame_Info,fault_va,PERM_WRITEABLE | PERM_USER);
+	   }
+	  else
+	   {
+		  env_page_ws_invalidate(faulted_env,fault_va);
+	      env_exit();
+	   }
+	 }
+	 else
+	 {
+		 map_frame(faulted_env->env_page_directory,Frame_Info,fault_va,PERM_WRITEABLE | PERM_USER);
+	 }
+   }
+	    //refer to the project presentation and documentation for details
 	else
 	{
 		//cprintf("REPLACEMENT=========================WS Size = %d\n", wsSize );
@@ -279,4 +298,26 @@ void __page_fault_handler_with_buffering(struct Env * curenv, uint32 fault_va)
 	// your code is here, remove the panic and write your code
 	panic("__page_fault_handler_with_buffering() is not implemented yet...!!");
 }
+ int is_stack_address(uint32 address)
+ { // check =
+    if (address < USTACKTOP && address >= USTACKBOTTOM) //check
+    {
+	   return 1;
+    }
+   else
+   {
+	   return 0;
+   }
+ }
+ int is_heap_address(uint32 address)
+ {
+     if (address >= USER_HEAP_START && address < USER_HEAP_MAX)
+     {
+	    return 1;
+	 }
+    else
+    {
+ 	   return 0;
+	}
 
+  }

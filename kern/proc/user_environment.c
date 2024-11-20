@@ -1,5 +1,3 @@
-/* See COPYRIGHT for copyright information. */
-
 #include <inc/x86.h>
 #include <inc/mmu.h>
 #include <inc/error.h>
@@ -19,6 +17,7 @@
 #include "../mem/kheap.h"
 #include "../mem/memory_manager.h"
 #include "../mem/shared_memory_manager.h"
+
 
 
 /******************************/
@@ -867,14 +866,20 @@ void* create_user_kern_stack(uint32* ptr_user_page_directory)
 #if USE_KHEAP
 	//TODO: [PROJECT'24.MS2 - #07] [2] FAULT HANDLER I - create_user_kern_stack
 	// Write your code here, remove the panic and write your code
-	panic("create_user_kern_stack() is not implemented yet...!!");
-
+	//panic("create_user_kern_stack() is not implemented yet...!!");
 	//allocate space for the user kernel stack.
+    void *kern_stack = kmalloc(KERNEL_STACK_SIZE);
+    //On failure: panic
+    if (kern_stack == NULL)
+    {
+       panic("Failed to allocate the Kernel Stack");
+    }
 	//remember to leave its bottom page as a GUARD PAGE (i.e. not mapped)
+    uint32 guard_page = (uint32)kern_stack;
+    pt_set_page_permissions(ptr_user_page_directory, guard_page,0,PERM_PRESENT);
 	//return a pointer to the start of the allocated space (including the GUARD PAGE)
-	//On failure: panic
-
-
+    return kern_stack ;
+}
 #else
 	if (KERNEL_HEAP_MAX - __cur_k_stk < KERNEL_STACK_SIZE)
 		panic("Run out of kernel heap!! Unable to create a kernel stack for the process. Can't create more processes!");
@@ -883,7 +888,6 @@ void* create_user_kern_stack(uint32* ptr_user_page_directory)
 	return kstack ;
 //	panic("KERNEL HEAP is OFF! user kernel stack is not supported");
 #endif
-}
 
 /*2024*/
 //===========================================================
@@ -909,9 +913,17 @@ void initialize_uheap_dynamic_allocator(struct Env* e, uint32 daStart, uint32 da
 {
 	//TODO: [PROJECT'24.MS2 - #10] [3] USER HEAP - initialize_uheap_dynamic_allocator
 	//Remember:
-	//	1) there's no initial allocations for the dynamic allocator of the user heap (=0)
+    //	1) there's no initial allocations for the dynamic allocator of the user heap (=0)
 	//	2) call the initialize_dynamic_allocator(..) to complete the initialization
 	//panic("initialize_uheap_dynamic_allocator() is not implemented yet...!!");
+	if (daStart >= daLimit)
+	{
+	    panic("The limit is exceeded...!!");
+	}
+	e->start = (uint32*)daStart;
+	e->hardlimit = (uint32*)daLimit;
+	e->segment_break = (uint32*)daStart;
+	initialize_dynamic_allocator(daStart,0);
 }
 
 //==============================================================
@@ -1216,5 +1228,3 @@ void cleanup_buffers(struct Env* e)
 	//	struct freeFramesCounters ffc2 = calculate_available_frames();
 	//	cprintf("[%s] aft, mod = %d, fb = %d, fnb = %d\n",curenv->prog_name, ffc2.modified, ffc2.freeBuffered, ffc2.freeNotBuffered);
 }
-
-
