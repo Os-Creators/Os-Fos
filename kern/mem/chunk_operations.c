@@ -141,18 +141,25 @@ void* sys_sbrk(int numOfPages)
 	/*Remove this line before start coding*/
 	//return (void*)-1 ;
 	/*====================================*/
+
 	struct Env* env = get_cpu_proc(); //the current running Environment to adjust its break limit
 	if (numOfPages == 0)
 	{
 	   return (void*)env->segment_break;
 	}
+
 	uint32* prev_segment_break = env->segment_break;
 	uint32 increment = numOfPages * PAGE_SIZE;
 	uint32* new_segment_break = (uint32*)((char*)env->segment_break + increment);
+
+
+	allocate_user_mem(env,(uint32)prev_segment_break,increment); //inc in bytes
+
 	if (new_segment_break > env->hardlimit)
 	{
 	   return (void*)-1;
 	}
+
 	env->segment_break = new_segment_break;
 	return (void*)prev_segment_break;
 }
