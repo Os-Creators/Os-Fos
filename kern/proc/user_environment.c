@@ -1,5 +1,3 @@
-/* See COPYRIGHT for copyright information. */
-
 #include <inc/x86.h>
 #include <inc/mmu.h>
 #include <inc/error.h>
@@ -19,6 +17,7 @@
 #include "../mem/kheap.h"
 #include "../mem/memory_manager.h"
 #include "../mem/shared_memory_manager.h"
+
 
 
 /******************************/
@@ -914,9 +913,17 @@ void initialize_uheap_dynamic_allocator(struct Env* e, uint32 daStart, uint32 da
 {
 	//TODO: [PROJECT'24.MS2 - #10] [3] USER HEAP - initialize_uheap_dynamic_allocator
 	//Remember:
-	//	1) there's no initial allocations for the dynamic allocator of the user heap (=0)
+    //	1) there's no initial allocations for the dynamic allocator of the user heap (=0)
 	//	2) call the initialize_dynamic_allocator(..) to complete the initialization
 	//panic("initialize_uheap_dynamic_allocator() is not implemented yet...!!");
+	if (daStart >= daLimit)
+	{
+	    panic("The limit is exceeded...!!");
+	}
+	e->start = (uint32*)daStart;
+	e->hardlimit = (uint32*)daLimit;
+	e->segment_break = (uint32*)daStart;
+	initialize_dynamic_allocator(daStart,0);
 }
 
 //==============================================================
