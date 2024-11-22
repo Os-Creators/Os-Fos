@@ -97,9 +97,30 @@ struct Share* get_share(int32 ownerID, char* name)
 {
 	//TODO: [PROJECT'24.MS2 - #17] [4] SHARED MEMORY - get_share()
 	//COMMENT THE FOLLOWING LINE BEFORE START CODING
-	panic("get_share is not implemented yet");
+    //panic("get_share is not implemented yet");
 	//Your Code is Here...
+	//lamiaa_mahmoud 2022170597
 
+	// Search for share object in static list
+#if USE_KHEAP == 0
+
+    for (int i = 0; i < MAX_SHARES; i++) {
+        if (shares[i].ownerID == ownerID && strcmp(shares[i].name, name) == 0) {
+            return &shares[i];
+        }
+    }
+#else
+    // Search for share object in dynamic list
+    struct Share* current_share = AllShares.shares_list.lh_first;
+    while (current_share != NULL) {
+            if (current_share->ownerID == ownerID && strcmp(current_share->name, name) == 0) {
+                return current_share;
+            }
+            current_share = current_share->prev_next_info.le_next;
+        }
+#endif
+
+    return NULL;
 }
 
 //=========================
