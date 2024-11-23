@@ -112,8 +112,7 @@ struct Share* create_share(int32 ownerID, char* shareName, uint32 size, uint8 is
 	        new_share->ID = (int32)new_share; 
 	        new_share->ID &= 0x7FFFFFFF; 
 
-	        LIST_INSERT_HEAD(&AllShares.shares_list, new_share, prev_next_info);
-
+	      LIST_INSERT_HEAD(&AllShares.shares_list, new_share);
 	        return new_share;
 }
 
