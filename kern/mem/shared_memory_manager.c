@@ -161,10 +161,41 @@ int createSharedObject(int32 ownerID, char* shareName, uint32 size, uint8 isWrit
 {
 	//TODO: [PROJECT'24.MS2 - #19] [4] SHARED MEMORY [KERNEL SIDE] - createSharedObject()
 	//COMMENT THE FOLLOWING LINE BEFORE START CODING
-	panic("createSharedObject is not implemented yet");
+	//panic("createSharedObject is not implemented yet");
 	//Your Code is Here...
 
 	struct Env* myenv = get_cpu_proc(); //The calling environment
+	struct Share* object=create_share(ownerID,shareName,size,1);
+
+	if(object==NULL){
+		return	E_NO_SHARE;
+	}
+	//LIST_INSERT_TAIL(&AllShares,object);
+	//LIST_INSERT_TAIL(&AllShares.shares_list,object);
+	uint32* start=virtual_address;
+	size = ROUNDUP(size, PAGE_SIZE);
+	uint32 allocate=size/PAGE_SIZE;
+	struct FrameInfo *ptr_frame_info;
+	struct FrameInfo** framesStorage;
+	for(int i=0;i<allocate;i++){
+		allocate_page_to_frame(start);
+		map_frame(ptr_page_directory,ptr_frame_info,uint32(start),PERM_WRITEABLE);
+		
+
+
+
+		//add to frames storage
+
+		start=start+PAGE_SIZE;
+	}
+	uint32*tmp;
+	//check tmp if exist in shares_list
+//	LIST_FOREACH(tmp,&AllShares.shares_list){
+//
+//		if(tmp==object)return E_SHARED_MEM_EXISTS;
+//	}
+	struct Share * s;
+	return s->ID;
 }
 
 
