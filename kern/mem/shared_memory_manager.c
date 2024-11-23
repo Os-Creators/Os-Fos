@@ -62,14 +62,19 @@ int getSizeOfSharedObject(int32 ownerID, char* shareName)
 // [1] Create frames_storage:
 //===========================
 // Create the frames_storage and initialize it by 0
+//lamiaa_mahmoud 2022170597
 inline struct FrameInfo** create_frames_storage(int numOfFrames)
 {
-	//TODO: [PROJECT'24.MS2 - #16] [4] SHARED MEMORY - create_frames_storage()
-	//COMMENT THE FOLLOWING LINE BEFORE START CODING
-	panic("create_frames_storage is not implemented yet");
-	//Your Code is Here...
+   struct FrameInfo** framesStorage = (struct FrameInfo**)malloc(numOfFrames * sizeof(struct FrameInfo*));
+	  if (framesStorage == NULL)
+	  {
+	        return NULL; 
+	  }
+	    memset(framesStorage, 0, numOfFrames * sizeof(struct FrameInfo*));
+	    return framesStorage;
 
 }
+
 
 //=====================================
 // [2] Alloc & Initialize Share Object:
@@ -81,9 +86,35 @@ struct Share* create_share(int32 ownerID, char* shareName, uint32 size, uint8 is
 {
 	//TODO: [PROJECT'24.MS2 - #16] [4] SHARED MEMORY - create_share()
 	//COMMENT THE FOLLOWING LINE BEFORE START CODING
-	panic("create_share is not implemented yet");
+    //panic("create_share is not implemented yet");
 	//Your Code is Here...
+	//lamiaa_mahmoud 2022170597
+	struct Share* new_share = (struct Share*)malloc(sizeof(struct Share));
+	    if (new_share == NULL) {
+	        return NULL; 
+	    }
+	
+	        memset(new_share, 0, sizeof(struct Share)); 
+	        new_share->ownerID = ownerID;
+	        strncpy(new_share->name, shareName, sizeof(new_share->name) - 1); 
+	        new_share->name[sizeof(new_share->name) - 1] = '\0'; 
+	        new_share->size = size;
+	        new_share->references = 1; 
+	        new_share->isWritable = isWritable;
 
+	        uint32 numFrames = (size + PAGE_SIZE - 1) / PAGE_SIZE; 
+	        new_share->framesStorage = create_frames_storage(numFrames);
+	        if (new_share->framesStorage == NULL) {
+	            free(new_share); 
+	            return NULL;
+	        }
+
+	        new_share->ID = (int32)new_share; 
+	        new_share->ID &= 0x7FFFFFFF; 
+
+	        LIST_INSERT_HEAD(&AllShares.shares_list, new_share, prev_next_info);
+
+	        return new_share;
 }
 
 //=============================
