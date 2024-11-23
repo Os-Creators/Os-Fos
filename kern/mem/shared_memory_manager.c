@@ -171,7 +171,7 @@ int createSharedObject(int32 ownerID, char* shareName, uint32 size, uint8 isWrit
 		return	E_NO_SHARE;
 	}
 	//LIST_INSERT_TAIL(&AllShares,object);
-	//LIST_INSERT_TAIL(&AllShares.shares_list,object);
+	LIST_INSERT_TAIL(&AllShares.shares_list,object);
 	uint32* start=virtual_address;
 	size = ROUNDUP(size, PAGE_SIZE);
 	uint32 allocate=size/PAGE_SIZE;
@@ -190,14 +190,13 @@ int createSharedObject(int32 ownerID, char* shareName, uint32 size, uint8 isWrit
 	}
 	uint32*tmp;
 	//check tmp if exist in shares_list
-//	LIST_FOREACH(tmp,&AllShares.shares_list){
-//
-//		if(tmp==object)return E_SHARED_MEM_EXISTS;
-//	}
+	LIST_FOREACH(tmp,&AllShares.shares_list){
+
+		if(tmp==object)return E_SHARED_MEM_EXISTS;
+	}
 	struct Share * s;
 	return s->ID;
 }
-
 
 //======================
 // [5] Get Share Object:
