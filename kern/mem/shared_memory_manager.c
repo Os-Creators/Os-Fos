@@ -185,7 +185,8 @@ int createSharedObject(int32 ownerID, char* shareName, uint32 size, uint8 isWrit
 
 
 		//add to frames storage
-
+struct FrameInfo** framesStorage;
+		framesStorage[i]=object;
 		start=start+PAGE_SIZE;
 	}
 	uint32*tmp;
