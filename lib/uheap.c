@@ -254,8 +254,19 @@ void* smalloc(char *sharedVarName, uint32 size, uint8 isWritable)
 	//==============================================================
 	//TODO: [PROJECT'24.MS2 - #18] [4] SHARED MEMORY [USER SIDE] - smalloc()
 	// Write your code here, remove the panic and write your code
-	panic("smalloc() is not implemented yet...!!");
-	return NULL;
+	//panic("smalloc() is not implemented yet...!!");
+	//return NULL;
+
+	void* va = malloc(size);
+
+	if(va != NULL){
+		int ret = sys_createSharedObject(sharedVarName,size,isWritable,va);
+
+		if(ret == E_SHARED_MEM_NOT_EXISTS)
+			return NULL;
+	}
+
+	return va;
 }
 
 //========================================
@@ -265,8 +276,24 @@ void* sget(int32 ownerEnvID, char *sharedVarName)
 {
 	//TODO: [PROJECT'24.MS2 - #20] [4] SHARED MEMORY [USER SIDE] - sget()
 	// Write your code here, remove the panic and write your code
-	panic("sget() is not implemented yet...!!");
-	return NULL;
+	//panic("sget() is not implemented yet...!!");
+	//return NULL;
+
+	int size = sys_getSizeOfSharedObject(ownerEnvID,sharedVarName);
+
+	if(size == E_SHARED_MEM_NOT_EXISTS)
+		return NULL;
+
+	void* va = malloc(size);
+
+	if(va != NULL){
+		int ret = sys_getSharedObject(ownerEnvID,sharedVarName,va);
+
+		if(ret == E_SHARED_MEM_NOT_EXISTS)
+			return NULL;
+	}
+
+	return va;
 }
 
 
