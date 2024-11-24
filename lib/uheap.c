@@ -70,16 +70,17 @@ void* malloc(uint32 size)
 	bool page_found = 0;
 	uint32 return_addr;
 
+	//initializing if it's the first time
 	if(firstTime){
 		struct UserPageInfo p_alloc;
-			p_alloc.is_first_addr =1;
-			p_alloc.start_page_va =(uint32)((char*)myEnv->hardlimit + PAGE_SIZE);
-			p_alloc.end_page_va = USER_HEAP_MAX - PAGE_SIZE;
-			p_alloc.number_of_pages =(USER_HEAP_MAX-(p_alloc.start_page_va)) / PAGE_SIZE;
-			p_alloc.is_free =1;
+		p_alloc.is_first_addr =1;
+		p_alloc.start_page_va =(uint32)((char*)myEnv->hardlimit + PAGE_SIZE);
+		p_alloc.end_page_va = USER_HEAP_MAX - PAGE_SIZE;
+		p_alloc.number_of_pages =(USER_HEAP_MAX-(p_alloc.start_page_va)) / PAGE_SIZE;
+		p_alloc.is_free =1;
 
-			user_pages_arr[0]=p_alloc;
-			firstTime = 0;
+		user_pages_arr[0]=p_alloc;
+		firstTime = 0;
 
 	}
 
@@ -150,6 +151,19 @@ void free(void* virtual_address)
 	//after finding the address call sys_allocate_user_mem(uint32 virtual_address, uint32 size)
 	//without umapping
 
+	//initializing if it's the first time
+	if(firstTime){
+		struct UserPageInfo p_alloc;
+		p_alloc.is_first_addr =1;
+		p_alloc.start_page_va =(uint32)((char*)myEnv->hardlimit + PAGE_SIZE);
+		p_alloc.end_page_va = USER_HEAP_MAX - PAGE_SIZE;
+		p_alloc.number_of_pages =(USER_HEAP_MAX-(p_alloc.start_page_va)) / PAGE_SIZE;
+		p_alloc.is_free =1;
+
+		user_pages_arr[0]=p_alloc;
+		firstTime = 0;
+
+	}
 	//block allocator
 	if((uint32)virtual_address >= USER_HEAP_START && (uint32*)virtual_address <= myEnv->hardlimit)
 	{
@@ -322,20 +336,4 @@ void freeHeap(void* virtual_address)
 {
 	panic("Not Implemented");
 
-}
-//==================================================================================//
-//========================== OUR HELPER FUNCTIONS ================================//
-//==================================================================================//
-void init()
-{
-	struct UserPageInfo p_alloc;
-	p_alloc.is_first_addr =1;
-	p_alloc.start_page_va =(uint32)((char*)myEnv->hardlimit + PAGE_SIZE);
-	p_alloc.end_page_va = USER_HEAP_MAX - PAGE_SIZE;
-	p_alloc.number_of_pages =(USER_HEAP_MAX-(p_alloc.start_page_va)) / PAGE_SIZE;
-	p_alloc.is_free =1;
-
-	user_pages_arr[0]=p_alloc;
-
-	uint32* hardlimit;
 }

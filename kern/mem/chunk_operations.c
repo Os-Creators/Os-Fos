@@ -149,12 +149,16 @@ void* sys_sbrk(int numOfPages)
 	uint32* prev_segment_break = env->segment_break;
 	uint32 increment = numOfPages * PAGE_SIZE;
 	uint32* new_segment_break = (uint32*)((char*)env->segment_break + increment);
-	if (new_segment_break > env->hardlimit)
-	{
-	   return (void*)-1;
-	}
-	env->segment_break = new_segment_break;
-	return (void*)prev_segment_break;
+
+	allocate_user_mem(env,(uint32)prev_segment_break,increment); //inc in bytes
+
+		if (new_segment_break > env->hardlimit)
+		{
+		   return (void*)-1;
+		}
+
+		env->segment_break = new_segment_break;
+		return (void*)prev_segment_break;
 }
 
 
@@ -183,8 +187,8 @@ void allocate_user_mem(struct Env* e, uint32 virtual_address, uint32 size)
      if(reg==TABLE_NOT_EXIST){
        create_page_table(e->env_page_directory,ptr);
       }
-
-     pt_set_page_permissions((uint32*)e->env_page_directory,ptr,PERM_AVAILABLE,0);
+     uint32 perm_available=0x800;
+     pt_set_page_permissions((uint32*)e->env_page_directory,ptr, perm_available,0);
      ptr=ptr+PAGE_SIZE;
     }
  }
@@ -206,8 +210,9 @@ void free_user_mem(struct Env* e, uint32 virtual_address, uint32 size)
   for (uint32 itr = 0; itr < allocated; itr ++) {
 
    uint32 x = pt_get_page_permissions(e->env_page_directory,va);
-    if(x==  ( x | (PERM_AVAILABLE))){
-     pt_set_page_permissions( e->env_page_directory, va,0 ,PERM_AVAILABLE);
+   uint32 perm_available=0x800;
+    if(x==  ( x | ( perm_available))){
+     pt_set_page_permissions( e->env_page_directory, va,0 , perm_available);
        //freeFree ALL pagespage file
     pf_remove_env_page(e,va);
     //Free ONLY pages that are resident in the working set from the memory
@@ -250,4 +255,3 @@ void move_user_mem(struct Env* e, uint32 src_virtual_address, uint32 dst_virtual
 //=================================================================================//
 //========================== END USER CHUNKS MANIPULATION =========================//
 //=================================================================================//
-

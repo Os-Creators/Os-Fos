@@ -153,8 +153,9 @@ void fault_handler(struct Trapframe *tf)
 			//(e.g. pointing to unmarked user heap page, kernel or wrong access rights),
 			//your code is here
 		   int permissions= pt_get_page_permissions(faulted_env->env_page_directory,fault_va);
+		   int perm_available=0x800;
 		   int user_access= permissions & PERM_USER;
-		   int marked_page= permissions & PERM_AVAILABLE;
+		   int marked_page= permissions & perm_available;
 		   int read_access= permissions & PERM_WRITEABLE;
 		   int present= permissions & PERM_PRESENT;
 
@@ -162,7 +163,7 @@ void fault_handler(struct Trapframe *tf)
 		   {
 			  env_exit();
 		   }
-		   if(fault_va>= USER_HEAP_START && fault_va<USER_HEAP_MAX && marked_page!=PERM_AVAILABLE) // unmarked
+		   if(fault_va>= USER_HEAP_START && fault_va<USER_HEAP_MAX && marked_page!=perm_available) // unmarked
 		   {
 			 env_exit();
 		   }
