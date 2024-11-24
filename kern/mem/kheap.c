@@ -328,8 +328,8 @@ void *krealloc(void *virtual_address, uint32 new_size)
 	if(new_size==0)
 		kfree(virtual_address);  //return what?
 
-
-	uint32 pageIndex = ((uint32)virtual_address - ((uint32)hardlimit+PAGE_SIZE))/PAGE_SIZE;
+	uint32* va = ROUNDDOWN(virtual_address,PAGE_SIZE);
+	uint32 pageIndex = ((uint32)va - ((uint32)hardlimit+PAGE_SIZE))/PAGE_SIZE;
 	uint32 num_of_pages = pages_arr[pageIndex].number_of_pages;
 	uint32 old_size = num_of_pages * PAGE_SIZE;
 
@@ -363,36 +363,95 @@ void *krealloc(void *virtual_address, uint32 new_size)
 				uint32 extraPagesReq=(new_size-old_size)/PAGE_SIZE;
 
 				// not extend  [ not free OR not enough free space infront of me]
-				if(!pages_arr[pageIndex + num_of_pages -1].is_free
-						|| pages_arr[pageIndex + num_of_pages -1].number_of_pages < extraPagesReq)
+				if(!pages_arr[pageIndex + num_of_pages].is_free
+						|| pages_arr[pageIndex + num_of_pages].number_of_pages < extraPagesReq)
 				{
 					return kleave(virtual_address,old_size,new_size);
 				}
 				// extend
 				else
 				{
-					uint32* nxt_freeBlock_va=(uint32*)pages_arr[pageIndex + num_of_pages -1].start_page_va;
-					uint32* Split_va=(uint32*)((char*)virtual_address+new_size);
+					uint32* nxt_freeBlock_va=(uint32*)pages_arr[pageIndex + num_of_pages].start_page_va;
+					uint32 nxt_freeBlock_pagesNum = pages_arr[pageIndex + num_of_pages].number_of_pages;
+					uint32 remaining_free_pages = nxt_freeBlock_pagesNum - extraPagesReq;
+
+					//Split data
+					new_size = ROUNDUP(new_size , PAGE_SIZE); //check calculation
+					uint32* va = ROUNDDOWN(virtual_address,PAGE_SIZE);
+
+					uint32* Split_va=(uint32*)((char*)va+new_size);
+					uint32 Split_pageIndex =  ((uint32)Split_va - ((uint32)hardlimit+PAGE_SIZE))/PAGE_SIZE;
+
+					//set new header for the current block
+					pages_arr[pageIndex].number_of_pages = num_of_pages+extraPagesReq;
+
 					// set new footer for the current block
+					pages_arr[Split_pageIndex-1].is_last_addr =1;
+					pages_arr[Split_pageIndex-1].is_free = 0;
+					pages_arr[Split_pageIndex-1].number_of_pages=num_of_pages+extraPagesReq;
+
+					//set new header for the next block
+					pages_arr[Split_pageIndex].number_of_pages = remaining_free_pages;
+					pages_arr[Split_pageIndex].is_first_addr = 1;
+					pages_arr[Split_pageIndex].is_free = 1;
+					pages_arr[Split_pageIndex].start_page_va = (uint32)nxt_freeBlock_va + (extraPagesReq*PAGE_SIZE);
+
+
+
+					// set new footer for the next block
+					pages_arr[Split_pageIndex+remaining_free_pages-1].is_last_addr =1;
+					pages_arr[Split_pageIndex+remaining_free_pages-1].is_free = 1;
+					pages_arr[Split_pageIndex+remaining_free_pages-1].number_of_pages=remaining_free_pages;
+					pages_arr[Split_pageIndex+remaining_free_pages-1].start_page_va = (uint32)nxt_freeBlock_va + (extraPagesReq*PAGE_SIZE);
 
 					// allocate from the next free block
 
 					// free the unused remains in the next free block
 
+
+					return virtual_address;
 				}
 
 			}
 
 			// decreasing case
-			if(old_size<new_size)
+			if(old_size>new_size)
 			{
 				uint32* remains_va=(uint32*)((char*)virtual_address+new_size);
 
+				new_size = ROUNDUP(new_size,PAGE_SIZE);
+				uint32 new_pages = (new_size)/PAGE_SIZE;
+
+				//split data
+				uint32 Split_pageIndex = pageIndex+new_pages;
+
+				uint32 remaining_free_pages = num_of_pages-new_pages;
+
+				//set new header for the current block
+				pages_arr[pageIndex].number_of_pages = new_pages;
+
 				// set new footer for the current block
+				pages_arr[Split_pageIndex-1].is_last_addr =1;
+				pages_arr[Split_pageIndex-1].is_free = 0;
+				pages_arr[Split_pageIndex-1].number_of_pages=new_pages;
 
 				// set new header and footer for the the remains that will be freed (make it bust sp we can use kfree on it)
+				//set new header for the next block
+				pages_arr[Split_pageIndex].number_of_pages = remaining_free_pages;
+				pages_arr[Split_pageIndex].is_first_addr = 1;
+				pages_arr[Split_pageIndex].is_free = 0;//make it not free because we will call kfree
+				pages_arr[Split_pageIndex].start_page_va = pages_arr[pageIndex].start_page_va + new_size;
+
+
+
+				// set new footer for the next block
+				pages_arr[Split_pageIndex+remaining_free_pages-1].is_last_addr =1;
+				pages_arr[Split_pageIndex+remaining_free_pages-1].is_free = 0;//make it not free because we will call kfree
+				pages_arr[Split_pageIndex+remaining_free_pages-1].number_of_pages=remaining_free_pages;
+				pages_arr[Split_pageIndex+remaining_free_pages-1].start_page_va = pages_arr[pageIndex].start_page_va + new_size;
 
 				// let kfree do the merging
+				kfree((uint32*)pages_arr[Split_pageIndex].start_page_va);
 
 				return virtual_address;
 			}
