@@ -58,5 +58,9 @@ int getSizeOfSharedObject(int32 ownerID, char* shareName);
 int getSharedObject(int32 ownerID, char* shareName, void* virtual_address);
 int freeSharedObject(int32 sharedObjectID, void *startVA);
 
+//==================================================================================//
+//============================== OUR HELPER FUNCTIONS ===================================//
+//==================================================================================//
+int compare_shares(struct Share *a, struct Share *b);
 
 #endif /* FOS_SHARED_MEMORY_MANAGER_H */

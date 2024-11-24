@@ -15,5 +15,8 @@ void* sget(int32 ownerEnvID, char *sharedVarName);
 void free(void* virtual_address);
 void sfree(void* virtual_address);
 void *realloc(void *virtual_address, uint32 new_size);
-
+//==================================================================================//
+//========================== OUR HELPER FUNCTIONS ================================//
+//==================================================================================//
+void* new_malloc(uint32 size);
 #endif
