@@ -256,8 +256,7 @@ void* smalloc(char *sharedVarName, uint32 size, uint8 isWritable)
 	// Write your code here, remove the panic and write your code
 	//panic("smalloc() is not implemented yet...!!");
 	//return NULL;
-
-	void* va = new_malloc(size);
+	/*void* va = new_malloc(size);
 
 	if(va != NULL){
 		int ret = sys_createSharedObject(sharedVarName,size,isWritable,va);
@@ -266,7 +265,92 @@ void* smalloc(char *sharedVarName, uint32 size, uint8 isWritable)
 			return NULL;
 	}
 
-	return va;
+	return va;*/
+
+
+	uint32 num_of_pages = ROUNDUP(size , PAGE_SIZE)/ PAGE_SIZE; //check calculation
+	//if(num_of_pages == 0) num_of_pages = 1;
+
+	uint32 page_allocator_pages = (USER_HEAP_MAX-((uint32)myEnv->hardlimit + PAGE_SIZE))/PAGE_SIZE;
+
+	if(num_of_pages > page_allocator_pages) return NULL;
+
+	bool page_found = 0;
+	uint32 return_addr;
+
+	//initializing if it's the first time
+	if(firstTime){
+		struct UserPageInfo p_alloc;
+		p_alloc.is_first_addr =1;
+		p_alloc.start_page_va =(uint32)((char*)myEnv->hardlimit + PAGE_SIZE);
+		p_alloc.end_page_va = USER_HEAP_MAX - PAGE_SIZE;
+		p_alloc.number_of_pages =(USER_HEAP_MAX-(p_alloc.start_page_va)) / PAGE_SIZE;
+		p_alloc.is_free =1;
+
+		user_pages_arr[0]=p_alloc;
+		firstTime = 0;
+
+	}
+
+	for(int i = 0 ; i < page_allocator_pages-1 ; i++){
+
+
+		if(user_pages_arr[i].is_free && user_pages_arr[i].number_of_pages >= num_of_pages){
+
+			uint32* va = (uint32*)(((uint32)myEnv->hardlimit + PAGE_SIZE) + (i*PAGE_SIZE));
+			if(va != NULL){
+				int ret = sys_createSharedObject(sharedVarName,size,isWritable,va);
+
+				if(ret == E_SHARED_MEM_NOT_EXISTS || ret == E_NO_SHARE)
+					return NULL;
+			}
+
+			if(user_pages_arr[i].number_of_pages > num_of_pages){
+				//split
+				uint32 splited_free_page_index = (i + num_of_pages);
+
+				//(like header)
+				user_pages_arr[splited_free_page_index].number_of_pages = user_pages_arr[i].number_of_pages -num_of_pages;
+				user_pages_arr[splited_free_page_index].is_free = 1;
+				user_pages_arr[splited_free_page_index].start_page_va = ((uint32)myEnv->hardlimit + PAGE_SIZE) + (splited_free_page_index*PAGE_SIZE);
+				user_pages_arr[splited_free_page_index].is_first_addr = 1;
+
+				//(like footer)
+				user_pages_arr[splited_free_page_index+user_pages_arr[splited_free_page_index].number_of_pages-1].number_of_pages = user_pages_arr[i].number_of_pages -num_of_pages;
+				user_pages_arr[splited_free_page_index+user_pages_arr[splited_free_page_index].number_of_pages-1].is_free = 1;
+
+			}
+
+			//like header of the allocated block
+			user_pages_arr[i].is_free = 0;
+			user_pages_arr[i].number_of_pages = num_of_pages;
+			user_pages_arr[i].start_page_va = ((uint32)myEnv->hardlimit + PAGE_SIZE) + (i*PAGE_SIZE);
+			return_addr = user_pages_arr[i].start_page_va;
+			user_pages_arr[i].is_first_addr = 1;
+
+			//like footer
+			user_pages_arr[i+num_of_pages-1].is_last_addr =1;
+			user_pages_arr[i+num_of_pages-1].is_free = 0;
+			user_pages_arr[i+num_of_pages-1].number_of_pages=num_of_pages;
+
+
+			page_found = 1;
+
+			//marking
+			sys_allocate_user_mem(return_addr,size);
+
+			break;
+
+		}else{
+			//jump
+			i = (i + user_pages_arr[i].number_of_pages) -1;//for loop will increment it again and remove (-1)
+
+		}
+	}
+
+	if(!page_found) return NULL; // couldn't allocate
+
+	return (uint32*)return_addr;
 }
 
 //========================================
@@ -284,7 +368,7 @@ void* sget(int32 ownerEnvID, char *sharedVarName)
 	if(size == E_SHARED_MEM_NOT_EXISTS)
 		return NULL;
 
-	void* va = new_malloc(size);
+	/*void* va = new_malloc(size);
 
 	if(va != NULL){
 		int ret = sys_getSharedObject(ownerEnvID,sharedVarName,va);
@@ -293,7 +377,92 @@ void* sget(int32 ownerEnvID, char *sharedVarName)
 			return NULL;
 	}
 
-	return va;
+	return va;*/
+
+
+	uint32 num_of_pages = ROUNDUP(size , PAGE_SIZE)/ PAGE_SIZE; //check calculation
+		//if(num_of_pages == 0) num_of_pages = 1;
+
+		uint32 page_allocator_pages = (USER_HEAP_MAX-((uint32)myEnv->hardlimit + PAGE_SIZE))/PAGE_SIZE;
+
+		if(num_of_pages > page_allocator_pages) return NULL;
+
+		bool page_found = 0;
+		uint32 return_addr;
+
+		//initializing if it's the first time
+		if(firstTime){
+			struct UserPageInfo p_alloc;
+			p_alloc.is_first_addr =1;
+			p_alloc.start_page_va =(uint32)((char*)myEnv->hardlimit + PAGE_SIZE);
+			p_alloc.end_page_va = USER_HEAP_MAX - PAGE_SIZE;
+			p_alloc.number_of_pages =(USER_HEAP_MAX-(p_alloc.start_page_va)) / PAGE_SIZE;
+			p_alloc.is_free =1;
+
+			user_pages_arr[0]=p_alloc;
+			firstTime = 0;
+
+		}
+
+		for(int i = 0 ; i < page_allocator_pages-1 ; i++){
+
+
+			if(user_pages_arr[i].is_free && user_pages_arr[i].number_of_pages >= num_of_pages){
+
+				uint32* va = (uint32*)(((uint32)myEnv->hardlimit + PAGE_SIZE) + (i*PAGE_SIZE));
+				if(va != NULL){
+					int ret = sys_getSharedObject(ownerEnvID,sharedVarName,va);
+
+					if(ret == E_SHARED_MEM_NOT_EXISTS)
+						return NULL;
+				}
+
+				if(user_pages_arr[i].number_of_pages > num_of_pages){
+					//split
+					uint32 splited_free_page_index = (i + num_of_pages);
+
+					//(like header)
+					user_pages_arr[splited_free_page_index].number_of_pages = user_pages_arr[i].number_of_pages -num_of_pages;
+					user_pages_arr[splited_free_page_index].is_free = 1;
+					user_pages_arr[splited_free_page_index].start_page_va = ((uint32)myEnv->hardlimit + PAGE_SIZE) + (splited_free_page_index*PAGE_SIZE);
+					user_pages_arr[splited_free_page_index].is_first_addr = 1;
+
+					//(like footer)
+					user_pages_arr[splited_free_page_index+user_pages_arr[splited_free_page_index].number_of_pages-1].number_of_pages = user_pages_arr[i].number_of_pages -num_of_pages;
+					user_pages_arr[splited_free_page_index+user_pages_arr[splited_free_page_index].number_of_pages-1].is_free = 1;
+
+				}
+
+				//like header of the allocated block
+				user_pages_arr[i].is_free = 0;
+				user_pages_arr[i].number_of_pages = num_of_pages;
+				user_pages_arr[i].start_page_va = ((uint32)myEnv->hardlimit + PAGE_SIZE) + (i*PAGE_SIZE);
+				return_addr = user_pages_arr[i].start_page_va;
+				user_pages_arr[i].is_first_addr = 1;
+
+				//like footer
+				user_pages_arr[i+num_of_pages-1].is_last_addr =1;
+				user_pages_arr[i+num_of_pages-1].is_free = 0;
+				user_pages_arr[i+num_of_pages-1].number_of_pages=num_of_pages;
+
+
+				page_found = 1;
+
+				//marking
+				sys_allocate_user_mem(return_addr,size);
+
+				break;
+
+			}else{
+				//jump
+				i = (i + user_pages_arr[i].number_of_pages) -1;//for loop will increment it again and remove (-1)
+
+			}
+		}
+
+		if(!page_found) return NULL; // couldn't allocate
+
+		return (uint32*)return_addr;
 }
 
 
