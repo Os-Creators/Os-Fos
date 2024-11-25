@@ -8,6 +8,8 @@
 #include <inc/types.h>
 #include <inc/queue.h>
 #include <inc/memlayout.h>
+//#include <kern/conc/sleeplock.h>
+
 
 
 /*2017*/
@@ -65,7 +67,8 @@ struct PageInfo {
 
 //const uint32 page_allocator_pages =(KERNEL_HEAP_MAX-KERNEL_HEAP_START)/PAGE_SIZE;   //(KERNEL_HEAP_MAX-((uint32)hardlimit + PAGE_SIZE))/PAGE_SIZE;
 struct PageInfo pages_arr[(KERNEL_HEAP_MAX-KERNEL_HEAP_START)/PAGE_SIZE];
-uint32 frame_page[1048576];
+//uint32 frame_page[1048576];
+//struct sleeplock k_sleeplock;
 
 //=================================================================================//
 //============================== OUR HELPER FUNCTIONS ===================================//

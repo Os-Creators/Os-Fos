@@ -219,8 +219,10 @@ void free_frame(struct FrameInfo *ptr_frame_info)
 //
 void decrement_references(struct FrameInfo* ptr_frame_info)
 {
-	if (--(ptr_frame_info->references) == 0)
+	if (--(ptr_frame_info->references) == 0){
+		ptr_frame_info->page_num = -1;
 		free_frame(ptr_frame_info);
+	}
 }
 
 //
@@ -391,6 +393,7 @@ int map_frame(uint32 *ptr_page_directory, struct FrameInfo *ptr_frame_info, uint
 			unmap_frame(ptr_page_directory , virtual_address);
 	}
 	ptr_frame_info->references++;
+	if(ptr_frame_info->references == 1) ptr_frame_info->page_num = (uint32)virtual_address>>12;
 
 	/*********************************************************************************/
 	/*NEW'23 el7:)
@@ -399,8 +402,7 @@ int map_frame(uint32 *ptr_page_directory, struct FrameInfo *ptr_frame_info, uint
 	ptr_page_table[PTX(virtual_address)] = CONSTRUCT_ENTRY(physical_address , pte_available_bits | perm | PERM_PRESENT);
 	/*********************************************************************************/
 
-	 frame_page[to_frame_number(ptr_frame_info)]=(uint32)virtual_address>>12;
-	 return 0;
+	return 0;
 }
 
 //
@@ -460,6 +462,7 @@ void unmap_frame(uint32 *ptr_page_directory, uint32 virtual_address)
 	{
 		if (ptr_frame_info->isBuffered && !CHECK_IF_KERNEL_ADDRESS((uint32)virtual_address))
 			cprintf("WARNING: Freeing BUFFERED frame at va %x!!!\n", virtual_address) ;
+
 		decrement_references(ptr_frame_info);
 
 		/*********************************************************************************/
@@ -470,7 +473,7 @@ void unmap_frame(uint32 *ptr_page_directory, uint32 virtual_address)
 		/*********************************************************************************/
 
 		tlb_invalidate(ptr_page_directory, (void *)virtual_address);
-		frame_page[to_frame_number(ptr_frame_info)]=-1;
+
 	}
 }
 
@@ -581,6 +584,7 @@ struct freeFramesCounters calculate_available_frames()
 }
 
 ///============================================================================================
+
 
 
 

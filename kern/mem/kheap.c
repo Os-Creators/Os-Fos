@@ -14,6 +14,8 @@ int initialize_kheap_dynamic_allocator(uint32 daStart, uint32 initSizeToAllocate
 {
     //TODO: [PROJECT'24.MS2 - #01] [1] KERNEL HEAP - initialize_kheap_dynamic_allocator
 
+	 //init_sleeplock(&k_sleeplock,"kernel sleep lock");
+
      start=(uint32*)daStart;
      hardlimit=(uint32*)daLimit;
      segment_break = (uint32*)((char*)daStart + initSizeToAllocate);
@@ -255,50 +257,55 @@ void kfree(void* virtual_address)
 
 unsigned int kheap_virtual_address(unsigned int physical_address){
 
-
 	struct FrameInfo* frame=to_frame_info(physical_address);
-    uint32 frame_number = to_frame_number(frame);
-    uint32 offset = physical_address & 0xFFF;
 
-    if(frame==NULL || frame->references==0)
+    if(frame == NULL || frame->references == 0)
     	return 0;
 
-    uint32 va = (frame_page[frame_number]<<12)|offset;
+    uint32 offset = physical_address & 0xFFF;
+    uint32 va = (frame->page_num<<12) | offset;
 
     return va;
 }
 
 unsigned int kheap_physical_address(unsigned int virtual_address)
 {
-    if (virtual_address < KERNEL_HEAP_START || virtual_address >= KERNEL_HEAP_MAX) {
-        return 0;
-    }
+	uint32* ptr_page_table;
+	struct FrameInfo* frame = get_frame_info(ptr_page_directory,virtual_address,&ptr_page_table);
 
+	if(frame == NULL)
+	    return 0;
 
-    uint32 pd_index_lm597 = (virtual_address >> 22) & 0x3FF;
-    uint32 pt_index_lm597 = (virtual_address >> 12) & 0x3FF;
-    uint32 offset_lm597 = virtual_address & 0xFFF;
-    uint32 *page_directory_lm597 = (uint32 *)vpd;
-    uint32 *page_table_lm597;
+	uint32 offset = virtual_address & 0xFFF;
+	uint32 pa = (to_frame_number(frame)<<12) | offset;
 
-    if (page_directory_lm597[pd_index_lm597] & 0x1) {
-
-        page_table_lm597 = (uint32 *)((page_directory_lm597[pd_index_lm597] & ~0xFFF) + KERNEL_BASE);
-
-    } else {
-
-        return 0;
-    }
-
-    if (page_table_lm597[pt_index_lm597] & 0x1) {
-
-        uint32 physical_address_lm597 = (page_table_lm597[pt_index_lm597] & ~0xFFF) | offset_lm597;
-        return physical_address_lm597;
-
-    } else {
-
-        return 0;
-    }
+	return pa;
+//
+//
+//    uint32 pd_index_lm597 = (virtual_address >> 22) & 0x3FF;
+//    uint32 pt_index_lm597 = (virtual_address >> 12) & 0x3FF;
+//    uint32 offset_lm597 = virtual_address & 0xFFF;
+//    uint32 *page_directory_lm597 = (uint32 *)vpd;
+//    uint32 *page_table_lm597;
+//
+//    if (page_directory_lm597[pd_index_lm597] & 0x1) {
+//
+//        page_table_lm597 = (uint32 *)((page_directory_lm597[pd_index_lm597] & ~0xFFF) + KERNEL_BASE);
+//
+//    } else {
+//
+//        return 0;
+//    }
+//
+//    if (page_table_lm597[pt_index_lm597] & 0x1) {
+//
+//        uint32 physical_address_lm597 = (page_table_lm597[pt_index_lm597] & ~0xFFF) | offset_lm597;
+//        return physical_address_lm597;
+//
+//    } else {
+//
+//        return 0;
+//    }
 }
 
 
@@ -322,16 +329,16 @@ void *krealloc(void *virtual_address, uint32 new_size)
 	//return NULL;
 	//panic("krealloc() is not implemented yet...!!");
 
-	if(virtual_address==NULL)
+	if(new_size == 0 && virtual_address == NULL)
+		return NULL;
+
+	if(virtual_address == NULL)
 		return kmalloc(new_size);
 
-	if(new_size==0)
-		kfree(virtual_address);  //return what?
-
-	uint32* va = ROUNDDOWN(virtual_address,PAGE_SIZE);
-	uint32 pageIndex = ((uint32)va - ((uint32)hardlimit+PAGE_SIZE))/PAGE_SIZE;
-	uint32 num_of_pages = pages_arr[pageIndex].number_of_pages;
-	uint32 old_size = num_of_pages * PAGE_SIZE;
+	if(new_size == 0){
+		kfree(virtual_address);
+		return NULL;
+	}
 
 	if((uint32)virtual_address >= KERNEL_HEAP_START && (uint32*)virtual_address <= hardlimit)
 	{
@@ -345,20 +352,26 @@ void *krealloc(void *virtual_address, uint32 new_size)
 
 	if((uint32*)virtual_address >= (uint32*)((char*)hardlimit+PAGE_SIZE) && (uint32)virtual_address <= KERNEL_HEAP_MAX)
 	{
-		virtual_address = ROUNDDOWN(virtual_address,PAGE_SIZE);// double check
-
 		//in page allocator
+
+		virtual_address = ROUNDDOWN(virtual_address,PAGE_SIZE);// double check
+		uint32 pageIndex = ((uint32)virtual_address - ((uint32)hardlimit+PAGE_SIZE))/PAGE_SIZE;
+		uint32 num_of_pages = pages_arr[pageIndex].number_of_pages;
+		uint32 old_size = num_of_pages * PAGE_SIZE;
+
 		if(new_size <= DYN_ALLOC_MAX_BLOCK_SIZE){
+
 			return page_to_block_allocator(virtual_address,old_size,new_size);
+
 		}else{
 
 			new_size = ROUNDUP(new_size,PAGE_SIZE);// double check
 
 			// equal case
-			if(old_size==new_size) return virtual_address;
+			if(old_size == new_size) return virtual_address;
 
 			// increasing case
-			if(old_size<new_size)
+			if(old_size < new_size)
 			{
 				uint32 extraPagesReq=(new_size-old_size)/PAGE_SIZE;
 
@@ -376,7 +389,6 @@ void *krealloc(void *virtual_address, uint32 new_size)
 					uint32 remaining_free_pages = nxt_freeBlock_pagesNum - extraPagesReq;
 
 					//Split data
-					new_size = ROUNDUP(new_size , PAGE_SIZE); //check calculation
 					uint32* va = ROUNDDOWN(virtual_address,PAGE_SIZE);
 
 					uint32* Split_va=(uint32*)((char*)va+new_size);
@@ -396,18 +408,11 @@ void *krealloc(void *virtual_address, uint32 new_size)
 					pages_arr[Split_pageIndex].is_free = 1;
 					pages_arr[Split_pageIndex].start_page_va = (uint32)nxt_freeBlock_va + (extraPagesReq*PAGE_SIZE);
 
-
-
 					// set new footer for the next block
 					pages_arr[Split_pageIndex+remaining_free_pages-1].is_last_addr =1;
 					pages_arr[Split_pageIndex+remaining_free_pages-1].is_free = 1;
 					pages_arr[Split_pageIndex+remaining_free_pages-1].number_of_pages=remaining_free_pages;
 					pages_arr[Split_pageIndex+remaining_free_pages-1].start_page_va = (uint32)nxt_freeBlock_va + (extraPagesReq*PAGE_SIZE);
-
-					// allocate from the next free block
-
-					// free the unused remains in the next free block
-
 
 					return virtual_address;
 				}
@@ -415,15 +420,13 @@ void *krealloc(void *virtual_address, uint32 new_size)
 			}
 
 			// decreasing case
-			if(old_size>new_size)
+			if(old_size > new_size)
 			{
-				uint32* remains_va=(uint32*)((char*)virtual_address+new_size);
 
-				new_size = ROUNDUP(new_size,PAGE_SIZE);
 				uint32 new_pages = (new_size)/PAGE_SIZE;
 
 				//split data
-				uint32 Split_pageIndex = pageIndex+new_pages;
+				uint32 Split_pageIndex = pageIndex + new_pages;
 
 				uint32 remaining_free_pages = num_of_pages-new_pages;
 
@@ -435,13 +438,11 @@ void *krealloc(void *virtual_address, uint32 new_size)
 				pages_arr[Split_pageIndex-1].is_free = 0;
 				pages_arr[Split_pageIndex-1].number_of_pages=new_pages;
 
-				// set new header and footer for the the remains that will be freed (make it bust sp we can use kfree on it)
 				//set new header for the next block
 				pages_arr[Split_pageIndex].number_of_pages = remaining_free_pages;
 				pages_arr[Split_pageIndex].is_first_addr = 1;
 				pages_arr[Split_pageIndex].is_free = 0;//make it not free because we will call kfree
 				pages_arr[Split_pageIndex].start_page_va = pages_arr[pageIndex].start_page_va + new_size;
-
 
 
 				// set new footer for the next block
@@ -468,6 +469,7 @@ void *krealloc(void *virtual_address, uint32 new_size)
 //=================================================================================//
 void* kleave(void* va,uint32 size,uint32 new_size) // sizes in bytes
 {
+	// use in increase size only
 	void* new_va = (void*)kmalloc(new_size);
 
 	if(new_va !=NULL){
@@ -486,18 +488,21 @@ void* page_to_block_allocator(void* va,uint32 size,uint32 new_size)
 		kfree(va);
 	}
 	return new_va;
-
 }
+
 void* block_to_page_allocator(void* va,uint32 size,uint32 new_size)
 {
+	// size without meta data
+
 	void* new_va = (void*)kmalloc(new_size);
 
 	if(new_va !=NULL){
+
 		memcpy(new_va, va, size); //size because old newsize will be bigger than the block we allocated;
 		free_block(va);
 	}
-	return new_va;
 
+	return new_va;
 }
 
 int allocate_page_to_frame(void * page_VA){
@@ -510,7 +515,6 @@ int allocate_page_to_frame(void * page_VA){
 	int ret = map_frame(ptr_page_directory, ptr_frame_info, (uint32)page_VA, PERM_WRITEABLE);
 	if (ret != 0)
 	{
-		cprintf("couldn't map!\n");
 		free_frame(ptr_frame_info);
 		return -1;
 	}
@@ -631,3 +635,4 @@ void init_free_list()
 //{
 //    return x >= 0 ? x : -x;
 //}
+
