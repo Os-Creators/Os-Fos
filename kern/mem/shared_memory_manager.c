@@ -130,8 +130,7 @@ struct Share* get_share(int32 ownerID, char* name)
 	//COMMENT THE FOLLOWING LINE BEFORE START CODING
     //panic("get_share is not implemented yet");
 	//Your Code is Here...
-	//lamiaa_mahmoud 2022170597
-
+	//lamiaa_mahmoud
 	// Search for share object in static list
 #if USE_KHEAP == 0
 
@@ -143,7 +142,7 @@ struct Share* get_share(int32 ownerID, char* name)
 #else
     // Search for share object in dynamic list
 	if(holding_spinlock(&AllShares.shareslock)==0) acquire_spinlock(&AllShares.shareslock);
-    struct Share* current_share = AllShares.shares_list.lh_first;
+    struct Share* current_share;
     LIST_FOREACH(current_share,&(AllShares.shares_list))
     {
       if (current_share->ownerID == ownerID && strcmp(current_share->name, name) == 0)
@@ -170,13 +169,12 @@ int createSharedObject(int32 ownerID, char* shareName, uint32 size, uint8 isWrit
 	//panic("createSharedObject is not implemented yet");
 	//Your Code is Here...
 
-		//struct Env* myenv = get_cpu_proc(); //The calling environment
+		struct Env* myenv = get_cpu_proc(); //The calling environment
 		struct Share* object=create_share(ownerID,shareName,size,isWritable);
 
 		if(object==NULL){
 			return	E_NO_SHARE;
 		}
-		//LIST_INSERT_TAIL(&AllShares,object);
 
 		if(holding_spinlock(&AllShares.shareslock)==0) acquire_spinlock(&AllShares.shareslock);
 
@@ -205,7 +203,12 @@ int createSharedObject(int32 ownerID, char* shareName, uint32 size, uint8 isWrit
 			allocate_frame(&ptr_frame_info);  //it panics if there is no memory
 
 			//Map the given va to the allocated frame
-			int ret = map_frame(ptr_page_directory, ptr_frame_info, (uint32)start, PERM_WRITEABLE);
+			int perm = PERM_USER | PERM_PRESENT;
+			if (object->isWritable)
+			{
+				perm |= PERM_WRITEABLE;
+			}
+			int ret = map_frame(myenv->env_page_directory, ptr_frame_info, (uint32)(start+ i*PAGE_SIZE), perm);
 			if (ret != 0)
 			{
 				cprintf("couldn't map!\n");
@@ -214,9 +217,8 @@ int createSharedObject(int32 ownerID, char* shareName, uint32 size, uint8 isWrit
 			}
 
 	        //add to frames storage
-		  //object->framesStorage[i] = mem;
-		  object->framesStorage[i] = ptr_frame_info;
-
+		    //object->framesStorage[i] = mem;
+		    object->framesStorage[i] = ptr_frame_info;
 			start=start+PAGE_SIZE;
 		}
 

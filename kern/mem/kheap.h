@@ -87,4 +87,3 @@ void init_free_list();
 //int my_abs(int x);
 
 #endif // FOS_KERN_KHEAP_H_
-
