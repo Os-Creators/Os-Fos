@@ -490,13 +490,16 @@ void *realloc_block_FF(void* va, uint32 new_size)
 
 			if(new_va !=NULL){
 			memcpy(new_va, va, size);  //without meta data
-			cprintf("va in realloc after %p",va);
+		//	cprintf("va in realloc after %p",va);
 
 			set_block_data(va, size+8, 0); // should remove
 			free_block(va);
-		    cprintf("here");
-			}
+		  //  cprintf("here");
 			return new_va;
+
+			}
+			else
+				return va;
 
 		}
 		/////////////////////////
@@ -560,7 +563,7 @@ void *realloc_block_FF(void* va, uint32 new_size)
 
 			return va;
 		}
-
+	
 
 	// /*PLEASE NOTICE that new_size does not include meta data (header,footer) , shimaa*/
 	// 	//[2] Test realloc by passing size = 0. It should call free //return null
@@ -726,7 +729,6 @@ void *realloc_block_FF(void* va, uint32 new_size)
 	// 	}
 
 }
-
 /*********************************************************************************************/
 /*********************************************************************************************/
 /*********************************************************************************************/
