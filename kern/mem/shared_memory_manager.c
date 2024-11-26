@@ -170,57 +170,65 @@ int createSharedObject(int32 ownerID, char* shareName, uint32 size, uint8 isWrit
 	//Your Code is Here...
 
 		struct Env* myenv = get_cpu_proc(); //The calling environment
+		if(get_share(ownerID,shareName)!=NULL){
+			return	E_SHARED_MEM_EXISTS;
+		}
 		struct Share* object=create_share(ownerID,shareName,size,isWritable);
 
+
 		if(object==NULL){
+		//	kfree((void *)object);
 			return	E_NO_SHARE;
 		}
 
-		if(holding_spinlock(&AllShares.shareslock)==0) acquire_spinlock(&AllShares.shareslock);
+		//LIST_INSERT_TAIL(&AllShares,object);
 
-		struct Share* tmp;
 
-		//check tmp if exist in shares_list
-		LIST_FOREACH(tmp,&(AllShares.shares_list))
-		{
-			if(compare_shares(tmp,object) || tmp == object){
-		    	if(holding_spinlock(&AllShares.shareslock)==1) release_spinlock(&AllShares.shareslock);
-				return E_SHARED_MEM_NOT_EXISTS;
-			}
-		}
+//		struct Share* tmp;
+//
+//		//check tmp if exist in shares_list
+//		LIST_FOREACH(tmp,&(AllShares.shares_list))
+//		{
+//			if(compare_shares(tmp,object) || tmp == object){
+//				release_spinlock(&(AllShares.shareslock));
+//				return E_SHARED_MEM_NOT_EXISTS;
+//			}
+//		}
 
-		LIST_INSERT_TAIL(&AllShares.shares_list,object);
-   	    if(holding_spinlock(&AllShares.shareslock)==1) release_spinlock(&AllShares.shareslock);
+//		LIST_INSERT_TAIL(&AllShares.shares_list,object);
+//		release_spinlock(&(AllShares.shareslock));
 
-		uint32* start=virtual_address;
+		uint32 start=(uint32)virtual_address;
 		size = ROUNDUP(size, PAGE_SIZE);
 		uint32 allocate=size/PAGE_SIZE;
 		struct FrameInfo *ptr_frame_info;
-		struct FrameInfo** framesStorage;
+		//struct FrameInfo** framesStorage;
 		for(uint32 i=0;i<allocate;i++)
 		{
 			//Allocate new frame
-			allocate_frame(&ptr_frame_info);  //it panics if there is no memory
+			allocate_frame(&(object->framesStorage[i]));
 
 			//Map the given va to the allocated frame
-			int perm = PERM_USER | PERM_PRESENT;
-			if (object->isWritable)
-			{
-				perm |= PERM_WRITEABLE;
-			}
-			int ret = map_frame(myenv->env_page_directory, ptr_frame_info, (uint32)(start+ i*PAGE_SIZE), perm);
-			if (ret != 0)
-			{
-				cprintf("couldn't map!\n");
-				free_frame(ptr_frame_info);
-				return E_NO_SHARE;
-			}
+			int ret = map_frame(myenv->env_page_directory, object->framesStorage[i], start, PERM_WRITEABLE|PERM_USER);
+		//	pt_set_page_permissions(myenv->env_page_directory,(uint32)start,0,PERM_PRESENT);
+//			if (ret != 0)
+//			{
+//				cprintf("couldn't map!\n");
+//				free_frame(ptr_frame_info);
+//				return E_NO_SHARE;
+//			}
 
 	        //add to frames storage
-		    //object->framesStorage[i] = mem;
-		    object->framesStorage[i] = ptr_frame_info;
+		  //object->framesStorage[i] = mem;
+		 // object->framesStorage[i] = ptr_frame_info;
+
 			start=start+PAGE_SIZE;
 		}
+
+		acquire_spinlock(&(AllShares.shareslock));
+		LIST_INSERT_TAIL(&(AllShares.shares_list),object);
+		release_spinlock(&(AllShares.shareslock));
+
 
 		return object->ID;
 
