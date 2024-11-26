@@ -14,15 +14,13 @@ int initialize_kheap_dynamic_allocator(uint32 daStart, uint32 initSizeToAllocate
 {
     //TODO: [PROJECT'24.MS2 - #01] [1] KERNEL HEAP - initialize_kheap_dynamic_allocator
 
-	 //init_sleeplock(&k_sleeplock,"kernel sleep lock");
-
      start=(uint32*)daStart;
      hardlimit=(uint32*)daLimit;
      segment_break = (uint32*)((char*)daStart + initSizeToAllocate);
 
          if (start > hardlimit || segment_break> hardlimit)
          {
-          	panic("exced the limit...!!");
+          	panic("exceed the limit...!!");
          }
 
          uint32* tmp_start=start;
@@ -34,6 +32,7 @@ int initialize_kheap_dynamic_allocator(uint32 daStart, uint32 initSizeToAllocate
 
     	 initialize_dynamic_allocator(daStart,initSizeToAllocate);
     	 init_free_list();
+    	 init_spinlock(&k_spinlock,"kernel sleep lock");
 
        return 0;
 }
@@ -88,18 +87,30 @@ void* kmalloc(unsigned int size)
 	//Write your code here, remove the panic and write your code
 	//kpanic_into_prompt("kmalloc() is not implemented yet...!!");
 
+
 	// Block Allocator
 	if(size <= DYN_ALLOC_MAX_BLOCK_SIZE)
-		return alloc_block_FF(size);
+	{
+		acquire_spinlock(&k_spinlock);
+		void* addr = alloc_block_FF(size);
+		release_spinlock(&k_spinlock);
 
+		return addr;
+	}
 	// Page Allocator
 	if(isKHeapPlacementStrategyFIRSTFIT() != 1)
+	{
 		return NULL;
-
+	}
 	uint32 num_of_pages = ROUNDUP(size , PAGE_SIZE)/ PAGE_SIZE; //check calculation
 	uint32 page_allocator_pages = (KERNEL_HEAP_MAX-((uint32)hardlimit + PAGE_SIZE))/PAGE_SIZE;
 
-	if(num_of_pages > page_allocator_pages) return NULL;
+	if(num_of_pages > page_allocator_pages)
+	{
+		return NULL;
+	}
+
+	acquire_spinlock(&k_spinlock);
 
 	bool page_found = 0;
 	uint32 return_addr;
@@ -144,7 +155,11 @@ void* kmalloc(unsigned int size)
 			uint32 start_page_va = pages_arr[i].start_page_va;
 			while(tmp_num_of_pages--)
 			{
-				if(allocate_page_to_frame((uint32*)(start_page_va)) != 0) return NULL;
+				if(allocate_page_to_frame((uint32*)(start_page_va)) != 0)
+				{
+					release_spinlock(&k_spinlock);
+					return NULL;
+				}
 				start_page_va = (start_page_va +PAGE_SIZE);
 			}
 
@@ -158,7 +173,12 @@ void* kmalloc(unsigned int size)
 		}
 	}
 
-	if(!page_found) return NULL; // couldn't allocate
+	release_spinlock(&k_spinlock);
+
+	if(!page_found)
+	{
+		return NULL; // couldn't allocate
+	}
 
 	return (uint32*)return_addr;
 }
@@ -170,6 +190,8 @@ void kfree(void* virtual_address)
 	//panic("kfree() is not implemented yet...!!");
 	//you need to get the size of the given allocation using its address
 	//refer to the project presentation and documentation for details
+
+	acquire_spinlock(&k_spinlock);
 
 	//block allocator
 	if((uint32)virtual_address >= KERNEL_HEAP_START && (uint32*)virtual_address <= hardlimit)
@@ -186,7 +208,9 @@ void kfree(void* virtual_address)
 
 		if(pages_arr[pageIndex].is_free || !pages_arr[pageIndex].is_first_addr)
 		{
-			cprintf("already free Virtual address or not first address in allocated pages...");return;
+			cprintf("already free Virtual address or not first address in allocated pages...");
+			release_spinlock(&k_spinlock);
+			return;
 		}
 
 		//header of this block of pages
@@ -253,59 +277,45 @@ void kfree(void* virtual_address)
 		panic("Invalid Virtual address...");
 	}
 
+	release_spinlock(&k_spinlock);
 }
 
 unsigned int kheap_virtual_address(unsigned int physical_address){
 
+	acquire_spinlock(&k_spinlock);
+
 	struct FrameInfo* frame=to_frame_info(physical_address);
 
     if(frame == NULL || frame->references == 0)
+    {
+    	release_spinlock(&k_spinlock);
     	return 0;
+    }
 
     uint32 offset = physical_address & 0xFFF;
     uint32 va = (frame->page_num<<12) | offset;
 
+    release_spinlock(&k_spinlock);
     return va;
 }
 
 unsigned int kheap_physical_address(unsigned int virtual_address)
 {
+	acquire_spinlock(&k_spinlock);
+
 	uint32* ptr_page_table;
 	struct FrameInfo* frame = get_frame_info(ptr_page_directory,virtual_address,&ptr_page_table);
 
 	if(frame == NULL)
+	{
+		release_spinlock(&k_spinlock);
 	    return 0;
-
+	}
 	uint32 offset = virtual_address & 0xFFF;
 	uint32 pa = (to_frame_number(frame)<<12) | offset;
 
+	release_spinlock(&k_spinlock);
 	return pa;
-//
-//
-//    uint32 pd_index_lm597 = (virtual_address >> 22) & 0x3FF;
-//    uint32 pt_index_lm597 = (virtual_address >> 12) & 0x3FF;
-//    uint32 offset_lm597 = virtual_address & 0xFFF;
-//    uint32 *page_directory_lm597 = (uint32 *)vpd;
-//    uint32 *page_table_lm597;
-//
-//    if (page_directory_lm597[pd_index_lm597] & 0x1) {
-//
-//        page_table_lm597 = (uint32 *)((page_directory_lm597[pd_index_lm597] & ~0xFFF) + KERNEL_BASE);
-//
-//    } else {
-//
-//        return 0;
-//    }
-//
-//    if (page_table_lm597[pt_index_lm597] & 0x1) {
-//
-//        uint32 physical_address_lm597 = (page_table_lm597[pt_index_lm597] & ~0xFFF) | offset_lm597;
-//        return physical_address_lm597;
-//
-//    } else {
-//
-//        return 0;
-//    }
 }
 
 
@@ -330,23 +340,41 @@ void *krealloc(void *virtual_address, uint32 new_size)
 	//panic("krealloc() is not implemented yet...!!");
 
 	if(new_size == 0 && virtual_address == NULL)
+	{
 		return NULL;
+	}
 
 	if(virtual_address == NULL)
+	{
 		return kmalloc(new_size);
+	}
 
-	if(new_size == 0){
+	if(new_size == 0)
+	{
 		kfree(virtual_address);
 		return NULL;
 	}
 
+
 	if((uint32)virtual_address >= KERNEL_HEAP_START && (uint32*)virtual_address <= hardlimit)
 	{
+		void* addr;
 		//in block allocator
-		if(new_size <= DYN_ALLOC_MAX_BLOCK_SIZE){
-			return realloc_block_FF(virtual_address,new_size);
+		if(new_size <= DYN_ALLOC_MAX_BLOCK_SIZE)
+		{
+			acquire_spinlock(&k_spinlock);
+			addr = realloc_block_FF(virtual_address,new_size);
+			release_spinlock(&k_spinlock);
+
+			if(addr == virtual_address)
+				addr = NULL;
+
+			return addr;
+
 		}else{
-			return block_to_page_allocator(virtual_address,get_block_size(virtual_address)-8,new_size);// old size is not valid
+
+			addr = block_to_page_allocator(virtual_address,get_block_size(virtual_address)-8,new_size);// old size is not valid
+			return addr;
 		}
 	}
 
@@ -354,21 +382,30 @@ void *krealloc(void *virtual_address, uint32 new_size)
 	{
 		//in page allocator
 
+		acquire_spinlock(&k_spinlock);
+
 		virtual_address = ROUNDDOWN(virtual_address,PAGE_SIZE);// double check
 		uint32 pageIndex = ((uint32)virtual_address - ((uint32)hardlimit+PAGE_SIZE))/PAGE_SIZE;
 		uint32 num_of_pages = pages_arr[pageIndex].number_of_pages;
 		uint32 old_size = num_of_pages * PAGE_SIZE;
+		void* addr;
 
-		if(new_size <= DYN_ALLOC_MAX_BLOCK_SIZE){
-
-			return page_to_block_allocator(virtual_address,old_size,new_size);
+		if(new_size <= DYN_ALLOC_MAX_BLOCK_SIZE)
+		{
+			addr = page_to_block_allocator(virtual_address,old_size,new_size);
+			release_spinlock(&k_spinlock);
+			return addr;
 
 		}else{
 
 			new_size = ROUNDUP(new_size,PAGE_SIZE);// double check
 
 			// equal case
-			if(old_size == new_size) return virtual_address;
+			if(old_size == new_size)
+			{
+				release_spinlock(&k_spinlock);
+				return virtual_address;
+			}
 
 			// increasing case
 			if(old_size < new_size)
@@ -379,7 +416,9 @@ void *krealloc(void *virtual_address, uint32 new_size)
 				if(!pages_arr[pageIndex + num_of_pages].is_free
 						|| pages_arr[pageIndex + num_of_pages].number_of_pages < extraPagesReq)
 				{
-					return kleave(virtual_address,old_size,new_size);
+					release_spinlock(&k_spinlock);
+					addr = kleave(virtual_address,old_size,new_size);
+					return addr;
 				}
 				// extend
 				else
@@ -414,6 +453,7 @@ void *krealloc(void *virtual_address, uint32 new_size)
 					pages_arr[Split_pageIndex+remaining_free_pages-1].number_of_pages=remaining_free_pages;
 					pages_arr[Split_pageIndex+remaining_free_pages-1].start_page_va = (uint32)nxt_freeBlock_va + (extraPagesReq*PAGE_SIZE);
 
+					release_spinlock(&k_spinlock);
 					return virtual_address;
 				}
 
@@ -454,6 +494,7 @@ void *krealloc(void *virtual_address, uint32 new_size)
 				// let kfree do the merging
 				kfree((uint32*)pages_arr[Split_pageIndex].start_page_va);
 
+				release_spinlock(&k_spinlock);
 				return virtual_address;
 			}
 
@@ -485,6 +526,7 @@ void* page_to_block_allocator(void* va,uint32 size,uint32 new_size)
 
 	if(new_va !=NULL){
 		memcpy(new_va, va, new_size); //new size because old size will be bigger than the block we allocated;
+		release_spinlock(&k_spinlock);
 		kfree(va);
 	}
 	return new_va;
@@ -499,7 +541,9 @@ void* block_to_page_allocator(void* va,uint32 size,uint32 new_size)
 	if(new_va !=NULL){
 
 		memcpy(new_va, va, size); //size because old newsize will be bigger than the block we allocated;
+		acquire_spinlock(&k_spinlock);
 		free_block(va);
+		release_spinlock(&k_spinlock);
 	}
 
 	return new_va;
