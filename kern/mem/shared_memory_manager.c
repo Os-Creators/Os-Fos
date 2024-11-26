@@ -225,6 +225,7 @@ int createSharedObject(int32 ownerID, char* shareName, uint32 size, uint8 isWrit
 			start=start+PAGE_SIZE;
 		}
 
+	
 		acquire_spinlock(&(AllShares.shareslock));
 		LIST_INSERT_TAIL(&(AllShares.shares_list),object);
 		release_spinlock(&(AllShares.shareslock));
