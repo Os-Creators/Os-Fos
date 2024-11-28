@@ -277,7 +277,6 @@ void free_share(struct Share* ptrShare)
   if(holding_spinlock((&AllShares.shareslock))==1)
     release_spinlock((&AllShares.shareslock));
 
-
   kfree(ptrShare->framesStorage);
   kfree(ptrShare);
 
@@ -293,10 +292,11 @@ int freeSharedObject(int32 sharedObjectID, void *startVA)
   //panic("freeSharedObject is not implemented yet");
   //Your Code is Here...
 
-  // Get the shared object from the "shares_list"
+//	Get the shared object from the "shares_list"
+//	Unmap it from the current process
+//	If page table(s) become empty, remove it
 
-  if(holding_spinlock(&(AllShares.shareslock))==0)
-   acquire_spinlock(&(AllShares.shareslock));
+  if(holding_spinlock(&(AllShares.shareslock))==0)acquire_spinlock(&(AllShares.shareslock));
 
   struct Share* sObject;
 
@@ -306,29 +306,34 @@ int freeSharedObject(int32 sharedObjectID, void *startVA)
       {
           break;
       }
+
   }
 
-  cprintf("INNNNN\n");
+  // corner case
+  if(sObject == NULL || sObject->references == 0)
+  {
+	  cprintf("NO OBJECTTT ;3 \n");
+	  if(holding_spinlock(&(AllShares.shareslock))==1)release_spinlock(&(AllShares.shareslock));
+	  return -1;
+  }
 
-  //startVA vs
+
   uint32 start = (uint32)startVA;
   uint32 allocate = sObject->size/PAGE_SIZE;
 
-  cprintf("my env where are u\n");
-
   struct Env* myenv = get_cpu_proc();
 
-  cprintf("envvv\n");
-
- //  for(uint32 i=0;i<allocate;i++)
+  // unmapping
+//   for(uint32 i=0;i<allocate;i++)
 //  {
 //    unmap_frame(myenv->env_page_directory,start);
 //    start=start+PAGE_SIZE;
 //  }
-//  cprintf("AFTER UNMAP IN freeSharedObject\n");
+
 
   for(uint32 i=0; i < allocate; i++)
     {
+
       uint32 *ptr_page_table;
       get_page_table(myenv->env_page_directory,start,&ptr_page_table);
 
@@ -350,9 +355,10 @@ int freeSharedObject(int32 sharedObjectID, void *startVA)
 		  {
 			// ptr_page_directory or my_env ?
 			//uint32 * ptr_page_table = kmalloc(PAGE_SIZE);  -> how page table created
-			 kfree((void *)start);  //remove page table from memory
-			 pf_remove_env_page(myenv,start); //remove page table from disk
-			 pd_clear_page_dir_entry(myenv->env_page_directory, start); //remove page table entry from page directory
+			 cprintf("asdasd \n");
+			 kfree(ptr_page_table);  //remove page table from memory
+			// pf_remove_env_page(myenv,(uint32)ptr_page_table); //remove page table from disk
+			 pd_clear_page_dir_entry(myenv->env_page_directory,(uint32) ptr_page_table); //remove page table entry from page directory
 
 		  }
      }
@@ -360,14 +366,11 @@ int freeSharedObject(int32 sharedObjectID, void *startVA)
       start = start + PAGE_SIZE;
     }
 
-
-
-    sObject->references--;
+   sObject->references--;
 
    if(sObject->references == 0) free_share(sObject);
 
-   if(holding_spinlock(&(AllShares.shareslock))==1)
-     	release_spinlock(&(AllShares.shareslock));
+   if(holding_spinlock(&(AllShares.shareslock))==1)release_spinlock(&(AllShares.shareslock));
 
    tlbflush();
 
