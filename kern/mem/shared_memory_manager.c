@@ -8,6 +8,7 @@
 #include <inc/queue.h>
 #include <inc/environment_definitions.h>
 
+#include <kern/disk/pagefile_manager.h>
 #include <kern/proc/user_environment.h>
 #include <kern/trap/syscall.h>
 #include "kheap.h"
@@ -142,22 +143,25 @@ struct Share* get_share(int32 ownerID, char* name)
     }
 #else
     // Search for share object in dynamic list
-	if(holding_spinlock(&AllShares.shareslock)==0) acquire_spinlock(&AllShares.shareslock);
-    struct Share* current_share = AllShares.shares_list.lh_first;
+	if(!holding_spinlock(&AllShares.shareslock)) acquire_spinlock(&AllShares.shareslock);
+
+	struct Share* current_share = AllShares.shares_list.lh_first;
     LIST_FOREACH(current_share,&(AllShares.shares_list))
     {
       if (current_share->ownerID == ownerID && strcmp(current_share->name, name) == 0)
       {
-    	 if(holding_spinlock(&AllShares.shareslock)==1) release_spinlock(&AllShares.shareslock);
+    	 if(holding_spinlock(&AllShares.shareslock)) release_spinlock(&AllShares.shareslock);
     	 return current_share;
 
        }
     }
-	if(holding_spinlock(&AllShares.shareslock)==1) release_spinlock(&AllShares.shareslock);
+
+    if(holding_spinlock(&AllShares.shareslock)) release_spinlock(&AllShares.shareslock);
+    return NULL;
 
 #endif
 
-    return NULL;
+
 }
 
 //=========================
@@ -174,13 +178,12 @@ int createSharedObject(int32 ownerID, char* shareName, uint32 size, uint8 isWrit
 		if(get_share(ownerID,shareName)!=NULL){
 			return	E_SHARED_MEM_EXISTS;
 		}
-		struct Share* object=create_share(ownerID,shareName,size,isWritable);
 
+		struct Share* object=create_share(ownerID,shareName,size,isWritable);
 
 		if(object==NULL){
 			return	E_NO_SHARE;
 		}
-
 
 		uint32 start=(uint32)virtual_address;
 		size = ROUNDUP(size, PAGE_SIZE);
@@ -198,10 +201,9 @@ int createSharedObject(int32 ownerID, char* shareName, uint32 size, uint8 isWrit
 			start=start+PAGE_SIZE;
 		}
 
-		acquire_spinlock(&(AllShares.shareslock));
+		if(!holding_spinlock(&(AllShares.shareslock))) acquire_spinlock(&(AllShares.shareslock));
 		LIST_INSERT_TAIL(&(AllShares.shares_list),object);
-		release_spinlock(&(AllShares.shareslock));
-
+		if(holding_spinlock(&(AllShares.shareslock))) release_spinlock(&(AllShares.shareslock));
 
 		return object->ID;
 }
@@ -222,10 +224,20 @@ int getSharedObject(int32 ownerID, char* shareName, void* virtual_address)
 	    return E_SHARED_MEM_NOT_EXISTS;
 	}
 
+	if(!holding_spinlock(&(AllShares.shareslock))) acquire_spinlock(&(AllShares.shareslock));
+
 	uint32 sizeOfPage = ROUNDUP(shared_obj->size,PAGE_SIZE)/PAGE_SIZE;
 	struct FrameInfo** phys_frames = shared_obj->framesStorage;
 	uint32 va = (uint32)virtual_address;
 	uint32* tmp_va = virtual_address;
+
+	shared_obj->references++;
+	if(shared_obj->references == 1)
+	{
+		shared_obj->ID = va & 0x7FFFFFFF;
+	}
+
+	if(holding_spinlock(&(AllShares.shareslock))) release_spinlock(&(AllShares.shareslock));
 
 	//map and update perms
 	for (uint32 i = 0; i < sizeOfPage; i++)
@@ -238,11 +250,6 @@ int getSharedObject(int32 ownerID, char* shareName, void* virtual_address)
 	   }
 	 }
 
-	shared_obj->references++;
-	if(shared_obj->references == 1)
-	{
-		shared_obj->ID = va & 0x7FFFFFFF;
-	}
 	return shared_obj->ID;
 }
 
@@ -257,23 +264,117 @@ int getSharedObject(int32 ownerID, char* shareName, void* virtual_address)
 //it should free its framesStorage and the share object itself
 void free_share(struct Share* ptrShare)
 {
-	//TODO: [PROJECT'24.MS2 - BONUS#4] [4] SHARED MEMORY [KERNEL SIDE] - free_share()
-	//COMMENT THE FOLLOWING LINE BEFORE START CODING
-	panic("free_share is not implemented yet");
-	//Your Code is Here...
+  //TODO: [PROJECT'24.MS2 - BONUS#4] [4] SHARED MEMORY [KERNEL SIDE] - free_share()
+  //COMMENT THE FOLLOWING LINE BEFORE START CODING
+  //panic("free_share is not implemented yet");
+  //Your Code is Here...
+
+  if(holding_spinlock(&(AllShares.shareslock))==0)
+    acquire_spinlock(&(AllShares.shareslock));
+
+  LIST_REMOVE(&AllShares.shares_list,ptrShare);
+
+  if(holding_spinlock((&AllShares.shareslock))==1)
+    release_spinlock((&AllShares.shareslock));
+
+
+  kfree(ptrShare->framesStorage);
+  kfree(ptrShare);
 
 }
+
 //========================
 // [B2] Free Share Object:
 //========================
 int freeSharedObject(int32 sharedObjectID, void *startVA)
 {
-	//TODO: [PROJECT'24.MS2 - BONUS#4] [4] SHARED MEMORY [KERNEL SIDE] - freeSharedObject()
-	//COMMENT THE FOLLOWING LINE BEFORE START CODING
-	panic("freeSharedObject is not implemented yet");
-	//Your Code is Here...
+  //TODO: [PROJECT'24.MS2 - BONUS#4] [4] SHARED MEMORY [KERNEL SIDE] - freeSharedObject()
+  //COMMENT THE FOLLOWING LINE BEFORE START CODING
+  //panic("freeSharedObject is not implemented yet");
+  //Your Code is Here...
 
+  // Get the shared object from the "shares_list"
+
+  if(holding_spinlock(&(AllShares.shareslock))==0)
+   acquire_spinlock(&(AllShares.shareslock));
+
+  struct Share* sObject;
+
+  LIST_FOREACH(sObject, &(AllShares.shares_list))
+  {
+    if (sObject->ID == sharedObjectID)
+      {
+          break;
+      }
+  }
+
+  cprintf("INNNNN\n");
+
+  //startVA vs
+  uint32 start = (uint32)startVA;
+  uint32 allocate = sObject->size/PAGE_SIZE;
+
+  cprintf("my env where are u\n");
+
+  struct Env* myenv = get_cpu_proc();
+
+  cprintf("envvv\n");
+
+ //  for(uint32 i=0;i<allocate;i++)
+//  {
+//    unmap_frame(myenv->env_page_directory,start);
+//    start=start+PAGE_SIZE;
+//  }
+//  cprintf("AFTER UNMAP IN freeSharedObject\n");
+
+  for(uint32 i=0; i < allocate; i++)
+    {
+      uint32 *ptr_page_table;
+      get_page_table(myenv->env_page_directory,start,&ptr_page_table);
+
+
+      if((void*) myenv->env_page_directory[PDX((uint32*)start)] != (void*)NULL)
+      {
+    	  bool empty = 1;
+
+		   for(int j=PTX(start); j<1024; j++)
+		  {
+			if(ptr_page_table[j] !=(ptr_page_table[j] & PERM_AVAILABLE))
+			{
+			   empty = 0;
+			   break;
+			}
+		  }
+
+		  if(empty)
+		  {
+			// ptr_page_directory or my_env ?
+			//uint32 * ptr_page_table = kmalloc(PAGE_SIZE);  -> how page table created
+			 kfree((void *)start);  //remove page table from memory
+			 pf_remove_env_page(myenv,start); //remove page table from disk
+			 pd_clear_page_dir_entry(myenv->env_page_directory, start); //remove page table entry from page directory
+
+		  }
+     }
+
+      start = start + PAGE_SIZE;
+    }
+
+
+
+    sObject->references--;
+
+   if(sObject->references == 0) free_share(sObject);
+
+   if(holding_spinlock(&(AllShares.shareslock))==1)
+     	release_spinlock(&(AllShares.shareslock));
+
+   tlbflush();
+
+   return 0;
 }
+
+
 //==================================================================================//
 //============================== OUR HELPER FUNCTIONS ===================================//
 //==================================================================================//
@@ -282,4 +383,3 @@ int compare_shares(struct Share *a, struct Share *b) {
            strcmp(a->name, b->name) == 0 &&
            a->size == b->size;
 }
-

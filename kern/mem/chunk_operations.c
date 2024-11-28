@@ -212,7 +212,7 @@ void free_user_mem(struct Env* e, uint32 virtual_address, uint32 size)
    uint32 x = pt_get_page_permissions(e->env_page_directory,va);
    uint32 perm_available=0x800;
     if(x==  ( x | ( perm_available))){
-     pt_set_page_permissions( e->env_page_directory, va,0 , perm_available);
+    pt_set_page_permissions( e->env_page_directory, va,0 , perm_available);
        //freeFree ALL pagespage file
     pf_remove_env_page(e,va);
     //Free ONLY pages that are resident in the working set from the memory
