@@ -198,16 +198,14 @@ int createSharedObject(int32 ownerID, char* shareName, uint32 size, uint8 isWrit
 
 			allocate_frame(&(frames[i]));
 
-
-
 			int ret = map_frame(myenv->env_page_directory, frames[i], start, PERM_WRITEABLE|PERM_USER);
 
 			start=start+PAGE_SIZE;
 		}
 
-		acquire_spinlock(&(AllShares.shareslock));
+		if(!holding_spinlock(&(AllShares.shareslock))) acquire_spinlock(&(AllShares.shareslock));
 		LIST_INSERT_TAIL(&(AllShares.shares_list),object);
-		release_spinlock(&(AllShares.shareslock));
+		if(holding_spinlock(&(AllShares.shareslock))) release_spinlock(&(AllShares.shareslock));
 
 
 		return object->ID;
@@ -364,7 +362,7 @@ int freeSharedObject(int32 sharedObjectID, void *startVA)
 			 cprintf("asdasd \n");
 			 kfree(ptr_page_table);  //remove page table from memory
 			// pf_remove_env_page(myenv,(uint32)ptr_page_table); //remove page table from disk
-			 pd_clear_page_dir_entry(myenv->env_page_directory,(uint32) ptr_page_table); //remove page table entry from page directory
+			 //pd_clear_page_dir_entry(myenv->env_page_directory,(uint32) ptr_page_table); //remove page table entry from page directory
 
 		  }
      }
