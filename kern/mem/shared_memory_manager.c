@@ -179,33 +179,39 @@ int createSharedObject(int32 ownerID, char* shareName, uint32 size, uint8 isWrit
 			return	E_SHARED_MEM_EXISTS;
 		}
 
+
 		struct Share* object=create_share(ownerID,shareName,size,isWritable);
+
 
 		if(object==NULL){
 			return	E_NO_SHARE;
 		}
 
+
 		uint32 start=(uint32)virtual_address;
 		size = ROUNDUP(size, PAGE_SIZE);
 		uint32 allocate=size/PAGE_SIZE;
-		struct FrameInfo *ptr_frame_info;
+		struct FrameInfo **frames=object->framesStorage;
 
 		for(uint32 i=0;i<allocate;i++)
 		{
-			//Allocate new frame
-			allocate_frame(&(object->framesStorage[i]));
 
-			//Map the given va to the allocated frame
-			int ret = map_frame(myenv->env_page_directory, object->framesStorage[i], start, PERM_WRITEABLE|PERM_USER);
+			allocate_frame(&(frames[i]));
+
+
+
+			int ret = map_frame(myenv->env_page_directory, frames[i], start, PERM_WRITEABLE|PERM_USER);
 
 			start=start+PAGE_SIZE;
 		}
 
-		if(!holding_spinlock(&(AllShares.shareslock))) acquire_spinlock(&(AllShares.shareslock));
+		acquire_spinlock(&(AllShares.shareslock));
 		LIST_INSERT_TAIL(&(AllShares.shares_list),object);
-		if(holding_spinlock(&(AllShares.shareslock))) release_spinlock(&(AllShares.shareslock));
+		release_spinlock(&(AllShares.shareslock));
+
 
 		return object->ID;
+
 }
 //======================
 // [5] Get Share Object:
