@@ -301,7 +301,7 @@ void* smalloc(char *sharedVarName, uint32 size, uint8 isWritable)
 			if(va != NULL){
 				int ret = sys_createSharedObject(sharedVarName,size,isWritable,va);
 
-				if(ret == E_SHARED_MEM_NOT_EXISTS || ret == E_NO_SHARE)
+				if(ret < 0 || ret < 0)
 					return NULL;
 			}
 
@@ -412,7 +412,7 @@ void* sget(int32 ownerEnvID, char *sharedVarName)
 			if(va != NULL){
 				int ret = sys_getSharedObject(ownerEnvID,sharedVarName,va);
 
-				if(ret == E_SHARED_MEM_NOT_EXISTS)
+				if(ret < 0)
 					return NULL;
 			}
 
@@ -613,3 +613,4 @@ void* new_malloc(uint32 size){
 
 	return (uint32*)return_addr;
 }
+
