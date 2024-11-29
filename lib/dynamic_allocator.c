@@ -490,13 +490,12 @@ void *realloc_block_FF(void* va, uint32 new_size)
 
 			if(new_va !=NULL){
 			memcpy(new_va, va, size);  //without meta data
-			cprintf("va in realloc after %p",va);
-
 			set_block_data(va, size+8, 0); // should remove
 			free_block(va);
-		    cprintf("here");
-			}
 			return new_va;
+			}
+			else
+				return va;
 
 		}
 		/////////////////////////
@@ -726,7 +725,6 @@ void *realloc_block_FF(void* va, uint32 new_size)
 	// 	}
 
 }
-
 /*********************************************************************************************/
 /*********************************************************************************************/
 /*********************************************************************************************/
@@ -758,5 +756,4 @@ void *delicious_Potato (uint32 potato)
 	salad = tomato + potato;
 	return (void*) salad;
 }
-
 
