@@ -52,22 +52,7 @@ uint32* start;
 uint32* hardlimit;
 uint32* segment_break;
 
-typedef LIST_ENTRY(PageInfo) Free_page_LIST_entry_t;
-struct PageInfo {
 
-	uint32 start_page_va;    // data type? (store address)
-	uint32 end_page_va;      // inclusive AKA free page
-
-	bool is_first_addr;      // is first address in all allocated blocks?
-	bool is_last_addr;
-    bool is_free;
-
-    uint32 number_of_pages;
-	Free_page_LIST_entry_t prev_next_info;
-};
-
-//const uint32 page_allocator_pages =(KERNEL_HEAP_MAX-KERNEL_HEAP_START)/PAGE_SIZE;   //(KERNEL_HEAP_MAX-((uint32)hardlimit + PAGE_SIZE))/PAGE_SIZE;
-struct PageInfo pages_arr[(KERNEL_HEAP_MAX-KERNEL_HEAP_START)/PAGE_SIZE];
 struct sleeplock k_sleeplock;
 
 //=================================================================================//

@@ -4,6 +4,23 @@
 #include <inc/dynamic_allocator.h>
 #include "memory_manager.h"
 
+typedef LIST_ENTRY(PageInfo) Free_page_LIST_entry_t;
+struct PageInfo {
+
+	uint32 start_page_va;    // data type? (store address)
+	uint32 end_page_va;      // inclusive AKA free page
+
+	bool is_first_addr;      // is first address in all allocated blocks?
+	bool is_last_addr;
+    bool is_free;
+
+    uint32 number_of_pages;
+	Free_page_LIST_entry_t prev_next_info;
+};
+
+//const uint32 page_allocator_pages =(KERNEL_HEAP_MAX-KERNEL_HEAP_START)/PAGE_SIZE;   //(KERNEL_HEAP_MAX-((uint32)hardlimit + PAGE_SIZE))/PAGE_SIZE;
+struct PageInfo pages_arr[(KERNEL_HEAP_MAX-KERNEL_HEAP_START)/PAGE_SIZE];
+
 
 inline void acquireSleep(struct sleeplock* k)
 {
@@ -147,6 +164,7 @@ void* kmalloc(unsigned int size)
 				pages_arr[splited_free_page_index+pages_arr[splited_free_page_index].number_of_pages-1].is_free = 1;
 
 			}
+
 
 			//like header of the allocated block
 			pages_arr[i].is_free = 0;
@@ -465,6 +483,22 @@ void *krealloc(void *virtual_address, uint32 new_size)
 					pages_arr[Split_pageIndex+remaining_free_pages-1].is_free = 1;
 					pages_arr[Split_pageIndex+remaining_free_pages-1].number_of_pages=remaining_free_pages;
 					pages_arr[Split_pageIndex+remaining_free_pages-1].start_page_va = (uint32)nxt_freeBlock_va + (extraPagesReq*PAGE_SIZE);
+
+					//mapping
+					uint32* old_free_va=(uint32*)((char*)va+old_size);
+					uint32 old_free_pageIndex =  ((uint32)old_free_va - ((uint32)hardlimit+PAGE_SIZE))/PAGE_SIZE;
+
+					uint32 tmp_num_of_pages=extraPagesReq;
+					uint32 start_page_va = pages_arr[old_free_pageIndex].start_page_va;
+					while(tmp_num_of_pages--)
+					{
+						if(allocate_page_to_frame((uint32*)(start_page_va)) != 0)
+						{
+							//releaseSleep(&k_sleeplock);
+							return NULL;
+						}
+						start_page_va = (start_page_va +PAGE_SIZE);
+					}
 
 					releaseSleep(&k_sleeplock);
 					return virtual_address;

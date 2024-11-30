@@ -179,7 +179,6 @@ int createSharedObject(int32 ownerID, char* shareName, uint32 size, uint8 isWrit
 			return	E_SHARED_MEM_EXISTS;
 		}
 
-
 		struct Share* object=create_share(ownerID,shareName,size,isWritable);
 
 
@@ -191,6 +190,7 @@ int createSharedObject(int32 ownerID, char* shareName, uint32 size, uint8 isWrit
 		uint32 start=(uint32)virtual_address;
 		size = ROUNDUP(size, PAGE_SIZE);
 		uint32 allocate=size/PAGE_SIZE;
+
 		struct FrameInfo **frames=object->framesStorage;
 
 		for(uint32 i=0;i<allocate;i++)
@@ -203,10 +203,10 @@ int createSharedObject(int32 ownerID, char* shareName, uint32 size, uint8 isWrit
 			start=start+PAGE_SIZE;
 		}
 
+
 		if(!holding_spinlock(&(AllShares.shareslock))) acquire_spinlock(&(AllShares.shareslock));
 		LIST_INSERT_TAIL(&(AllShares.shares_list),object);
 		if(holding_spinlock(&(AllShares.shareslock))) release_spinlock(&(AllShares.shareslock));
-
 
 		return object->ID;
 
@@ -227,6 +227,7 @@ int getSharedObject(int32 ownerID, char* shareName, void* virtual_address)
 	{
 	    return E_SHARED_MEM_NOT_EXISTS;
 	}
+
 
 	if(!holding_spinlock(&(AllShares.shareslock))) acquire_spinlock(&(AllShares.shareslock));
 
