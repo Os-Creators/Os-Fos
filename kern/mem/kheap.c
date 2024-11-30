@@ -494,7 +494,7 @@ void *krealloc(void *virtual_address, uint32 new_size)
 					{
 						if(allocate_page_to_frame((uint32*)(start_page_va)) != 0)
 						{
-							//releaseSleep(&k_sleeplock);
+							releaseSleep(&k_sleeplock);
 							return NULL;
 						}
 						start_page_va = (start_page_va +PAGE_SIZE);
