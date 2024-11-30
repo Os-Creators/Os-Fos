@@ -306,9 +306,9 @@ void* smalloc(char *sharedVarName, uint32 size, uint8 isWritable)
 					return NULL;
 
 				user_pages_arr[i].ID_shared = ret;
-				cprintf("ID in smalloc %d\n",ret);
-				cprintf("array id in smalloc %d\n",user_pages_arr[i].ID_shared);
-				cprintf("index in smalloc %d\n",i);
+				//cprintf("ID in smalloc %d\n",ret);
+				//cprintf("array id in smalloc %d\n",user_pages_arr[i].ID_shared);
+				//cprintf("index in smalloc %d\n",i);
 			}
 
 			if(user_pages_arr[i].number_of_pages > num_of_pages){
@@ -493,20 +493,19 @@ void sfree(void* virtual_address)
 		    // Write your code here, remove the panic and write your code
 		    //panic("sfree() is not implemented yet...!!");
 
-	uint32* va = ROUNDDOWN(virtual_address,PAGE_SIZE);
-	uint32 pageIndex = ((uint32)va - ((uint32)myEnv->hardlimit+PAGE_SIZE))/PAGE_SIZE;
+	uint32 va = ROUNDDOWN((uint32)virtual_address,PAGE_SIZE);
+	uint32 pageIndex = (va - ((uint32)myEnv->hardlimit+PAGE_SIZE))/PAGE_SIZE;
 
 	int ID = user_pages_arr[pageIndex].ID_shared;
-
 	user_pages_arr[pageIndex].ID_shared = -1;
-	free(virtual_address);
-
-	cprintf("ID in sfree %d\n",ID);
-	cprintf("index in sfree %d\n",pageIndex);
+	free((void*)va);
+	//cprintf("ID in sfree %d\n",ID);
+	//cprintf("index in sfree %d\n",pageIndex);
 
 	//va &= 0x7FFFFFFF;
 
-	sys_freeSharedObject(ID,va);
+	sys_freeSharedObject(ID,(void*)va);
+
 
 }
 

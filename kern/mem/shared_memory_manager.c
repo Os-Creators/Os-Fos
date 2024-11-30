@@ -272,7 +272,6 @@ void free_share(struct Share* ptrShare)
   //COMMENT THE FOLLOWING LINE BEFORE START CODING
   //panic("free_share is not implemented yet");
   //Your Code is Here...
-
   if(holding_spinlock(&(AllShares.shareslock))==0)
     acquire_spinlock(&(AllShares.shareslock));
 
@@ -283,6 +282,7 @@ void free_share(struct Share* ptrShare)
 
   kfree(ptrShare->framesStorage);
   kfree(ptrShare);
+  cprintf("free share");
 
 }
 
@@ -327,27 +327,23 @@ int freeSharedObject(int32 sharedObjectID, void *startVA)
 
   struct Env* myenv = get_cpu_proc();
 
-  // unmapping
-//   for(uint32 i=0;i<allocate;i++)
-//  {
-//    unmap_frame(myenv->env_page_directory,start);
-//    start=start+PAGE_SIZE;
-//  }
-
-
   for(uint32 i=0; i < allocate; i++)
     {
 
       uint32 *ptr_page_table;
-      get_page_table(myenv->env_page_directory,start,&ptr_page_table);
+      int ret = get_page_table(myenv->env_page_directory,start,&ptr_page_table);
 
+	  cprintf(" %d ",ret);
+      cprintf("here 1\n");
 
-      if((void*) myenv->env_page_directory[PDX((uint32*)start)] != (void*)NULL)
+      if(myenv->env_page_directory[PDX((uint32*)start)] != 0)
       {
     	  bool empty = 1;
 
-		   for(int j=PTX(start); j<1024; j++)
+		   for(uint32 j=PTX(start); j<1024; j++)
 		  {
+			// cprintf("here %d \n",j); // j =1
+			// cprintf(" %d \n",(uint32)ptr_page_table[j]);
 			if(ptr_page_table[j] !=(ptr_page_table[j] & PERM_AVAILABLE))
 			{
 			   empty = 0;
@@ -361,10 +357,9 @@ int freeSharedObject(int32 sharedObjectID, void *startVA)
 			//uint32 * ptr_page_table = kmalloc(PAGE_SIZE);  -> how page table created
 			 cprintf("asdasd \n");
 			 kfree(ptr_page_table);  //remove page table from memory
-			// pf_remove_env_page(myenv,(uint32)ptr_page_table); //remove page table from disk
-			 //pd_clear_page_dir_entry(myenv->env_page_directory,(uint32) ptr_page_table); //remove page table entry from page directory
-
-		  }
+			 pf_remove_env_page(myenv,(uint32)ptr_page_table); //remove page table from disk
+			 pd_clear_page_dir_entry(myenv->env_page_directory,(uint32) ptr_page_table); //remove page table entry from page directory
+		 }
      }
 
       start = start + PAGE_SIZE;
