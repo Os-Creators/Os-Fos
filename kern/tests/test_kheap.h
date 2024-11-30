@@ -11,6 +11,10 @@
 # error "This is a FOS kernel header; user programs should not #include it"
 #endif
 #include <inc/types.h>
+
+#define Mega  (1024*1024)
+#define kilo (1024)
+
 //2016: Kernel Heap Tests
  int test_kmalloc();
  int test_kmalloc_nextfit();

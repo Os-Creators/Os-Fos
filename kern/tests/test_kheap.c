@@ -2365,16 +2365,12 @@ int test_krealloc_BF() {
 
 int test_krealloc_FF1()
 {
-	int eval = 0;
-	bool is_correct;
-
-	int initAllocatedSpace = 3*Mega;
-	initialize_dynamic_allocator(KERNEL_HEAP_START, initAllocatedSpace);
 
 	cprintf("ddd");
-	void * k = kmalloc(5*1024);
+	void * k = kmalloc(1*Mega);
+	void * f = kmalloc(1*Mega);
 	cprintf("as");
-	void* s = krealloc(k,6*1024);
+	void* s = krealloc(k,0.9*Mega);
 	cprintf("addd");
 	return 0;
 

@@ -538,9 +538,8 @@ void *krealloc(void *virtual_address, uint32 new_size)
 				pages_arr[Split_pageIndex+remaining_free_pages-1].start_page_va = pages_arr[pageIndex].start_page_va + new_size;
 
 				// let kfree do the merging
-				kfree((uint32*)pages_arr[Split_pageIndex].start_page_va);
-
 				releaseSleep(&k_sleeplock);
+				kfree((uint32*)pages_arr[Split_pageIndex].start_page_va);
 				return virtual_address;
 			}
 
