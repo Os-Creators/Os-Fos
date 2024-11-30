@@ -20,6 +20,7 @@ struct PageInfo {
 
 //const uint32 page_allocator_pages =(KERNEL_HEAP_MAX-KERNEL_HEAP_START)/PAGE_SIZE;   //(KERNEL_HEAP_MAX-((uint32)hardlimit + PAGE_SIZE))/PAGE_SIZE;
 struct PageInfo pages_arr[(KERNEL_HEAP_MAX-KERNEL_HEAP_START)/PAGE_SIZE];
+struct sleeplock k_sleeplock;
 
 
 inline void acquireSleep(struct sleeplock* k)
@@ -66,7 +67,6 @@ int initialize_kheap_dynamic_allocator(uint32 daStart, uint32 initSizeToAllocate
 
        return 0;
 }
-
 
 void* sbrk(int numOfPages)
 {
@@ -227,7 +227,6 @@ void kfree(void* virtual_address)
 	//block allocator
 	if((uint32)virtual_address >= KERNEL_HEAP_START && (uint32*)virtual_address <= hardlimit)
 	{
-		// va in the middle of the block?
 		free_block(virtual_address);
 	}
 	//page allocator
@@ -239,7 +238,7 @@ void kfree(void* virtual_address)
 
 		if(pages_arr[pageIndex].is_free || !pages_arr[pageIndex].is_first_addr)
 		{
-			cprintf("already free Virtual address or not first address in allocated pages...");
+			//cprintf("already free Virtual address or not first address in allocated pages...");
 			releaseSleep(&k_sleeplock);
 			return;
 		}
@@ -424,7 +423,7 @@ void *krealloc(void *virtual_address, uint32 new_size)
 		if(new_size <= DYN_ALLOC_MAX_BLOCK_SIZE)
 		{
 			addr = page_to_block_allocator(virtual_address,old_size,new_size);
-			releaseSleep(&k_sleeplock);
+			if(addr == NULL) releaseSleep(&k_sleeplock);
 			return addr;
 
 		}else{
@@ -604,11 +603,14 @@ int allocate_page_to_frame(void * page_VA){
 
 	//Map the given va to the allocated frame
 	int ret = map_frame(ptr_page_directory, ptr_frame_info, (uint32)page_VA, PERM_WRITEABLE);
+	ptr_frame_info->page_num = (uint32)page_VA>>12;
+
 	if (ret != 0)
 	{
 		free_frame(ptr_frame_info);
 		return -1;
 	}
+
 	return 0;
 }
 

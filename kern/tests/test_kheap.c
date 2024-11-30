@@ -2354,7 +2354,7 @@ int test_kfreelast()
 }
 
 int test_krealloc() {
-	panic("not implemented");
+	panic("not implemented yetttt");
 }
 
 
@@ -2365,7 +2365,18 @@ int test_krealloc_BF() {
 
 int test_krealloc_FF1()
 {
-	panic("not implemented");
+	int eval = 0;
+	bool is_correct;
+
+	int initAllocatedSpace = 3*Mega;
+	initialize_dynamic_allocator(KERNEL_HEAP_START, initAllocatedSpace);
+
+	cprintf("ddd");
+	void * k = kmalloc(5*1024);
+	cprintf("as");
+	void* s = krealloc(k,6*1024);
+	cprintf("addd");
+	return 0;
 
 }
 int test_krealloc_FF2()

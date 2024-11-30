@@ -51,8 +51,8 @@ void tlb_invalidate(uint32 *ptr_page_directory, void *virtual_address)
 //
 
 extern void initialize_disk_page_file();
-void initialize_paging()
-{
+void initialize_paging(){
+
 	// The example code here marks all frames_info as free.
 	// However this is not truly the case.  What memory is free?
 	//  1) Mark frame 0 as in use.
@@ -220,7 +220,6 @@ void free_frame(struct FrameInfo *ptr_frame_info)
 void decrement_references(struct FrameInfo* ptr_frame_info)
 {
 	if (--(ptr_frame_info->references) == 0){
-		ptr_frame_info->page_num = -1;
 		free_frame(ptr_frame_info);
 	}
 }
@@ -393,8 +392,6 @@ int map_frame(uint32 *ptr_page_directory, struct FrameInfo *ptr_frame_info, uint
 			unmap_frame(ptr_page_directory , virtual_address);
 	}
 	ptr_frame_info->references++;
-	if(ptr_frame_info->references == 1) ptr_frame_info->page_num = (uint32)virtual_address>>12;
-
 	/*********************************************************************************/
 	/*NEW'23 el7:)
 	 * [DONE] map_frame(): KEEP THE VALUES OF THE AVAILABLE BITS*/
