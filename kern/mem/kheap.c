@@ -7,13 +7,13 @@
 
 inline void acquireSleep(struct sleeplock* k)
 {
-	if(!holding_sleeplock(k))
+	//if(!holding_sleeplock(k))
 		acquire_sleeplock(k);
 }
 
 inline void releaseSleep(struct sleeplock* k)
 {
-	if(holding_sleeplock(k))
+	//if(holding_sleeplock(k))
 		release_sleeplock(k);
 }
 
@@ -104,9 +104,9 @@ void* kmalloc(unsigned int size)
 	// Block Allocator
 	if(size <= DYN_ALLOC_MAX_BLOCK_SIZE)
 	{
-		//acquireSleep(&k_sleeplock);
+		acquireSleep(&k_sleeplock);
 		void* addr = alloc_block_FF(size);
-		//releaseSleep(&k_sleeplock);
+		releaseSleep(&k_sleeplock);
 
 		return addr;
 	}
@@ -123,7 +123,7 @@ void* kmalloc(unsigned int size)
 		return NULL;
 	}
 
-	//acquireSleep(&k_sleeplock);
+	acquireSleep(&k_sleeplock);
 
 	bool page_found = 0;
 	uint32 return_addr;
@@ -170,7 +170,7 @@ void* kmalloc(unsigned int size)
 			{
 				if(allocate_page_to_frame((uint32*)(start_page_va)) != 0)
 				{
-					//releaseSleep(&k_sleeplock);
+					releaseSleep(&k_sleeplock);
 					return NULL;
 				}
 				start_page_va = (start_page_va +PAGE_SIZE);
@@ -186,7 +186,7 @@ void* kmalloc(unsigned int size)
 		}
 	}
 
-	//releaseSleep(&k_sleeplock);
+	releaseSleep(&k_sleeplock);
 
 	if(!page_found)
 	{
@@ -204,7 +204,7 @@ void kfree(void* virtual_address)
 	//you need to get the size of the given allocation using its address
 	//refer to the project presentation and documentation for details
 
-	//acquireSleep(&k_sleeplock);
+	acquireSleep(&k_sleeplock);
 
 	//block allocator
 	if((uint32)virtual_address >= KERNEL_HEAP_START && (uint32*)virtual_address <= hardlimit)
@@ -222,7 +222,7 @@ void kfree(void* virtual_address)
 		if(pages_arr[pageIndex].is_free || !pages_arr[pageIndex].is_first_addr)
 		{
 			cprintf("already free Virtual address or not first address in allocated pages...");
-			//releaseSleep(&k_sleeplock);
+			releaseSleep(&k_sleeplock);
 			return;
 		}
 
@@ -290,44 +290,44 @@ void kfree(void* virtual_address)
 		panic("Invalid Virtual address...");
 	}
 
-	//releaseSleep(&k_sleeplock);
+	releaseSleep(&k_sleeplock);
 }
 
 unsigned int kheap_virtual_address(unsigned int physical_address){
 
-	//acquireSleep(&k_sleeplock);
+	acquireSleep(&k_sleeplock);
 
 	struct FrameInfo* frame=to_frame_info(physical_address);
 
     if(frame == NULL || frame->references == 0)
     {
-    	//releaseSleep(&k_sleeplock);
+    	releaseSleep(&k_sleeplock);
     	return 0;
     }
 
     uint32 offset = physical_address & 0xFFF;
     uint32 va = (frame->page_num<<12) | offset;
 
-	//releaseSleep(&k_sleeplock);
+	releaseSleep(&k_sleeplock);
     return va;
 }
 
 unsigned int kheap_physical_address(unsigned int virtual_address)
 {
-	//acquireSleep(&k_sleeplock);
+	acquireSleep(&k_sleeplock);
 
 	uint32* ptr_page_table;
 	struct FrameInfo* frame = get_frame_info(ptr_page_directory,virtual_address,&ptr_page_table);
 
 	if(frame == NULL)
 	{
-		//releaseSleep(&k_sleeplock);
+		releaseSleep(&k_sleeplock);
 	    return 0;
 	}
 	uint32 offset = virtual_address & 0xFFF;
 	uint32 pa = (to_frame_number(frame)<<12) | offset;
 
-	//releaseSleep(&k_sleeplock);
+	releaseSleep(&k_sleeplock);
 	return pa;
 }
 
@@ -375,9 +375,9 @@ void *krealloc(void *virtual_address, uint32 new_size)
 		//in block allocator
 		if(new_size <= DYN_ALLOC_MAX_BLOCK_SIZE)
 		{
-			//acquireSleep(&k_sleeplock);
+			acquireSleep(&k_sleeplock);
 			addr = realloc_block_FF(virtual_address,new_size);
-			//releaseSleep(&k_sleeplock);
+			releaseSleep(&k_sleeplock);
 
 			if(addr == virtual_address)
 				addr = NULL;
@@ -395,7 +395,7 @@ void *krealloc(void *virtual_address, uint32 new_size)
 	{
 		//in page allocator
 
-		//acquireSleep(&k_sleeplock);
+		acquireSleep(&k_sleeplock);
 
 		virtual_address = ROUNDDOWN(virtual_address,PAGE_SIZE);// double check
 		uint32 pageIndex = ((uint32)virtual_address - ((uint32)hardlimit+PAGE_SIZE))/PAGE_SIZE;
@@ -406,7 +406,7 @@ void *krealloc(void *virtual_address, uint32 new_size)
 		if(new_size <= DYN_ALLOC_MAX_BLOCK_SIZE)
 		{
 			addr = page_to_block_allocator(virtual_address,old_size,new_size);
-			//releaseSleep(&k_sleeplock);
+			releaseSleep(&k_sleeplock);
 			return addr;
 
 		}else{
@@ -416,7 +416,7 @@ void *krealloc(void *virtual_address, uint32 new_size)
 			// equal case
 			if(old_size == new_size)
 			{
-				//releaseSleep(&k_sleeplock);
+				releaseSleep(&k_sleeplock);
 				return virtual_address;
 			}
 
@@ -429,7 +429,7 @@ void *krealloc(void *virtual_address, uint32 new_size)
 				if(!pages_arr[pageIndex + num_of_pages].is_free
 						|| pages_arr[pageIndex + num_of_pages].number_of_pages < extraPagesReq)
 				{
-					//releaseSleep(&k_sleeplock);
+					releaseSleep(&k_sleeplock);
 					addr = kleave(virtual_address,old_size,new_size);
 					return addr;
 				}
@@ -466,7 +466,7 @@ void *krealloc(void *virtual_address, uint32 new_size)
 					pages_arr[Split_pageIndex+remaining_free_pages-1].number_of_pages=remaining_free_pages;
 					pages_arr[Split_pageIndex+remaining_free_pages-1].start_page_va = (uint32)nxt_freeBlock_va + (extraPagesReq*PAGE_SIZE);
 
-					//releaseSleep(&k_sleeplock);
+					releaseSleep(&k_sleeplock);
 					return virtual_address;
 				}
 
@@ -507,7 +507,7 @@ void *krealloc(void *virtual_address, uint32 new_size)
 				// let kfree do the merging
 				kfree((uint32*)pages_arr[Split_pageIndex].start_page_va);
 
-				//releaseSleep(&k_sleeplock);
+				releaseSleep(&k_sleeplock);
 				return virtual_address;
 			}
 
@@ -539,7 +539,7 @@ void* page_to_block_allocator(void* va,uint32 size,uint32 new_size)
 
 	if(new_va !=NULL){
 		memcpy(new_va, va, new_size); //new size because old size will be bigger than the block we allocated;
-		//releaseSleep(&k_sleeplock);
+		releaseSleep(&k_sleeplock);
 		kfree(va);
 	}
 	return new_va;
@@ -554,9 +554,9 @@ void* block_to_page_allocator(void* va,uint32 size,uint32 new_size)
 	if(new_va !=NULL){
 
 		memcpy(new_va, va, size); //size because old newsize will be bigger than the block we allocated;
-		//acquireSleep(&k_sleeplock);
+		acquireSleep(&k_sleeplock);
 		free_block(va);
-		//releaseSleep(&k_sleeplock);
+		releaseSleep(&k_sleeplock);
 	}
 
 	return new_va;

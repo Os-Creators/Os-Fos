@@ -45,7 +45,7 @@ void acquire_sleeplock(struct sleeplock *lk)
 		}
 
 		lk->locked = 1;//2022170473
-		lk->pid = get_cpu_proc()->env_id;   //related to above comment
+		//lk->pid = get_cpu_proc()->env_id;   //related to above comment
 
 	if(holding_spinlock(&(lk->lk))==1) release_spinlock(&(lk->lk));//2022170473
 
@@ -59,13 +59,13 @@ void release_sleeplock(struct sleeplock *lk)
 	  //Your Code is Here...
 	if(holding_spinlock(&(lk->lk))==0) acquire_spinlock(&(lk->lk));//2022170432
 
-	      if(lk->pid==get_cpu_proc()->env_id)//2022170432
-	      {
+	    //  if(lk->pid==get_cpu_proc()->env_id)//2022170432
+	    //  {
 	    	
 	    	 	   wakeup_all(&(lk->chan));//2022170432
 	    	 	   lk->locked=0; //free //2022170432
-	    	 	   lk->pid=-1;//2022170432
-	      }
+	         	   lk->pid=0;//2022170432
+	     // }
 	      
 	if(holding_spinlock(&(lk->lk))==1) release_spinlock(&(lk->lk)); //2022170432
 }

@@ -504,6 +504,8 @@ void sfree(void* virtual_address)
 	cprintf("ID in sfree %d\n",ID);
 	cprintf("index in sfree %d\n",pageIndex);
 
+	//va &= 0x7FFFFFFF;
+
 	sys_freeSharedObject(ID,va);
 
 }
