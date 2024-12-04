@@ -349,12 +349,12 @@ void sys_allocate_chunk(uint32 virtual_address, uint32 size, uint32 perms)
 	//return;
 
 	if(virtual_address>USER_HEAP_MAX||virtual_address<USER_HEAP_START||virtual_address==0){
-					env_exit();
-				}
-			else{
-				allocate_chunk(cur_env->env_page_directory, virtual_address, size, perms);
-					return;
-			}
+		env_exit();
+	}
+	else{
+		allocate_chunk(cur_env->env_page_directory, virtual_address, size, perms);
+			return;
+	}
 }
 
 //2014
@@ -373,7 +373,11 @@ void sys_set_uheap_strategy(uint32 heapStrategy)
 {
 	_UHeapPlacementStrategy = heapStrategy;
 }
-
+void sys_env_set_priority(int envID, int priority)
+{
+	env_set_priority(envID, priority);
+	return;
+}
 /*******************************/
 /* SEMAPHORES SYSTEM CALLS */
 /*******************************/
@@ -711,7 +715,10 @@ uint32 syscall(uint32 syscallno, uint32 a1, uint32 a2, uint32 a3, uint32 a4, uin
 			sys_allocate_user_mem((uint32) a1, (uint32) a2);
 			return 0;
 			break; //  is void return 0 & break/return 0|| break?
-
+	case SYS_env_set_priority:
+			sys_env_set_priority((int)a1,(int)a2);
+			return 0;
+			break;
 
 	case NSYSCALLS:
 		return 	-E_INVAL;

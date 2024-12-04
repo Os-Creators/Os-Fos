@@ -19,6 +19,7 @@
 
 //2024 - decide whether to place this as a private member for each CPU or as a global for all CPUs?
 unsigned scheduler_method ;
+uint32 StarvThresh;
 
 ///Scheduler Queues
 //=================

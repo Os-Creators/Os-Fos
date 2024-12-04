@@ -79,7 +79,7 @@ struct Command commands[] =
 		//********************************//
 		{ "rub", "reads block of bytes from specific location in given environment" ,command_readuserblock, 3},
 		//TODO: [PROJECT'24.MS3 - #07] [3] PRIORITY RR Scheduler - initialize command
-
+		{"schedPRIRR", "Switch & initialize the scheduler to PRIORITY RR ",schedPRIRR,3},
 		//**************************************//
 		/* COMMANDS WITH AT LEAST ONE ARGUMENT */
 		//**************************************//
@@ -912,4 +912,16 @@ int command_get_modified_buffer_length(int number_of_arguments, char **arguments
 int command_tst(int number_of_arguments, char **arguments)
 {
 	return tst_handler(number_of_arguments, arguments);
+}
+
+int schedPRIRR(int number_of_arguments, char **arguments)
+{
+	int32 numOfPriorities = strtol(arguments[1],NULL, 10);
+
+	int quantum = strtol(arguments[2], NULL, 10);
+	int starvThresh = strtol(arguments[3], NULL, 10);
+
+
+	sched_init_PRIRR(numOfPriorities, quantum, starvThresh);
+	return 0;
 }

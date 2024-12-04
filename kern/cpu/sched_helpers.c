@@ -702,14 +702,42 @@ int get_load_average()
 void env_set_priority(int envID, int priority)
 {
 	//TODO: [PROJECT'24.MS3 - #06] [3] PRIORITY RR Scheduler - env_set_priority
-
+	int ret;//shimaa
 	//Get the process of the given ID
 	struct Env* proc ;
-	envid2env(envID, &proc, 0);
+	ret = envid2env(envID, &proc, 0);
 
+	if(ret == E_BAD_ENV)
+		return;
 	//Your code is here
 	//Comment the following line
-	panic("Not implemented yet");
+	//panic("Not implemented yet");
+
+	//what if priority is the same -> 1)no thing 2)put at the end of the queue
+	if(proc->priority == priority){
+		//?????
+	}
+
+	proc->priority = priority;
+
+	//C.S.
+	if(holding_spinlock(&ProcessQueues.qlock)==0) acquire_spinlock(&ProcessQueues.qlock);
+
+	for(int i = 0 ; i< num_of_ready_queues ; i++){
+		struct Env* tmp_proc = find_env_in_queue(&(ProcessQueues.env_ready_queues[i]),envID);
+
+		//process in ready queue
+		if( tmp_proc != NULL ){
+
+			sched_remove_ready(proc);
+			sched_insert_ready(proc);
+
+			break;//will not be in any other queue
+		}
+	}
+
+    if(holding_spinlock(&ProcessQueues.qlock)==1) release_spinlock(&ProcessQueues.qlock);
+
 }
 
 void sched_set_starv_thresh(uint32 starvThresh)
@@ -717,5 +745,6 @@ void sched_set_starv_thresh(uint32 starvThresh)
 	//TODO: [PROJECT'24.MS3 - #06] [3] PRIORITY RR Scheduler - sched_set_starv_thresh
 	//Your code is here
 	//Comment the following line
-	panic("Not implemented yet");
+	//panic("Not implemented yet");
+	StarvThresh = starvThresh;
 }

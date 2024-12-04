@@ -72,7 +72,7 @@ void wakeup_one(struct Channel *chan)
     struct Env *Mays_waked_process629 = dequeue(&(chan->queue));//2022170629
     if(Mays_waked_process629!=NULL)//2022170629
     {
-    	sched_insert_ready0(Mays_waked_process629);//2022170629
+    	sched_insert_ready(Mays_waked_process629);//2022170629
     }
 
     if(holding_spinlock(&ProcessQueues.qlock)==1) release_spinlock(&ProcessQueues.qlock);
