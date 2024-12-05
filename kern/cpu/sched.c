@@ -359,7 +359,45 @@ struct Env* fos_scheduler_PRIRR()
 	//TODO: [PROJECT'24.MS3 - #08] [3] PRIORITY RR Scheduler - fos_scheduler_PRIRR
 	//Your code is here
 	//Comment the following line
-	panic("Not implemented yet");
+	//panic("Not implemented yet");
+	struct Env *next_env = NULL;
+	cprintf("\n5");
+
+		struct Env *cur_env = get_cpu_proc();
+		cprintf("\n4");
+
+		//if(holding_spinlock(&ProcessQueues.qlock)==0) acquire_spinlock(&ProcessQueues.qlock);
+
+		if(cur_env != NULL)
+			sched_insert_ready(cur_env);
+
+		for (int i = 0 ; i < num_of_ready_queues  ;i++)
+		{
+			cprintf("\n3");
+
+			if(ProcessQueues.env_ready_queues[i].size > 0)
+			{
+				cprintf("\n2");
+
+				kclock_set_quantum(quantums[0]);
+
+				//acquire_spinlock(&(ProcessQueues.qlock));
+
+				next_env = dequeue(&(ProcessQueues.env_ready_queues[i]));
+
+				//release_spinlock(&ProcessQueues.qlock);
+				cprintf("\n1");
+			    //if(holding_spinlock(&ProcessQueues.qlock)==1) release_spinlock(&ProcessQueues.qlock);
+			    cprintf("doneeeeeeeee sched2");
+			    cprintf("is holdedddddd%d",holding_spinlock(&ProcessQueues.qlock));
+					return next_env;
+			 }
+		}
+		cprintf("doneeeeeeeee sched");
+
+	    //if(holding_spinlock(&ProcessQueues.qlock)==1) release_spinlock(&ProcessQueues.qlock);
+
+  return NULL;
 }
 
 //========================================
@@ -373,10 +411,38 @@ void clock_interrupt_handler(struct Trapframe* tf)
 		//TODO: [PROJECT'24.MS3 - #09] [3] PRIORITY RR Scheduler - clock_interrupt_handler
 		//Your code is here
 		//Comment the following line
-		panic("Not implemented yet");
+		//panic("Not implemented yet");
+		struct Env *promoted_item;
+		//int64 x=timer_ticks();
+		//struct Env *v = get_cpu_proc();
+
+		//if(holding_spinlock(&ProcessQueues.qlock)==0) acquire_spinlock(&ProcessQueues.qlock);
+
+		for(int i=1;i<=num_of_ready_queues;i++){
+			struct Env *v;
+
+			LIST_FOREACH(v,&ProcessQueues.env_ready_queues[i]){
+				int proc_clocks = v->nClocks;
+				if(proc_clocks>StarvThresh){
+					//critical_section
+
+					sched_remove_ready(v);
+					v->priority++;
+					sched_insert_ready(v);
+					cprintf("doneeeeeeeee clock");
+
+
+					/*promoted_item=dequeue(&(ProcessQueues.env_ready_queues[i]));
+					enqueue(&ProcessQueues.env_ready_queues[i-1],promoted_item);*/
+					//critical_section
+					//ProcessQueues.env_ready_queues[i-1]=ProcessQueues.env_ready_queues[i];
+				}
+			}
+		}
+		//if(holding_spinlock(&ProcessQueues.qlock)==1) release_spinlock(&ProcessQueues.qlock);
+
+
 	}
-
-
 
 	/********DON'T CHANGE THESE LINES***********/
 	ticks++ ;

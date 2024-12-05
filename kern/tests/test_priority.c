@@ -8,10 +8,105 @@
 extern int sys_calculate_free_frames();
 
 uint8 firstTime = 1;
+int test_num = 1;
 void test_priority_normal_and_higher()
 {
 #if USE_KHEAP
-	panic("not handled yet");
+
+	cprintf("\nenable automatic? 0 or 1\n");
+	int ans = getchar();
+	cputchar(ans);
+	if(ans - '0' == 0){
+		cprintf("\nwhich case to test?\n");
+		test_num = getchar();
+		cputchar(test_num);
+		test_num -= '0';
+	}
+
+	char run_command[100] = "runall";
+	switch(test_num){
+	case 1 :
+		cprintf("\n[1] Run 2 instance of Fibonacci with different priorities AND small threshold\n");
+		char command0[100] = "schedPRIRR 5 10 10";
+		execute_command(command0);
+		char command[100] = "load fib 100 0";
+		execute_command(command);
+		char command2[100] = "load fib 100 4";
+		execute_command(command2);
+		char print_com[100] = "printall";
+				execute_command(print_com);
+		//char run_command[100] = "runall";
+		execute_command(run_command);
+		break;
+	case 2 :
+			cprintf("\n[2] Run 2 instance of Fibonacci with different priorities AND large threshold\n");
+			char c1[100] = "schedPRIRR 5 10 1000";
+			execute_command(c1);
+			char c2[100] = "load fib 100 0";
+			execute_command(c2);
+			char c3[100] = "load fib 100 4";
+			execute_command(c3);
+
+			execute_command(run_command);
+
+			break;
+	case 3 :
+			cprintf("\n[3] Run 2 instance of Fibonacci with same priorities AND small threshold\n");
+			char c6[100] = "schedPRIRR 5 10 10";
+			execute_command(c6);
+			char c7[100] = "load fib 300 1";
+			execute_command(c7);
+			char c8[100] = "load fib 300 1";
+			execute_command(c8);
+
+			execute_command(run_command);
+			break;
+	case 4 :
+			cprintf("\n[4] Run 2 instance of Fibonacci with same priorities AND large threshold\n");
+			char c9[100] = "schedPRIRR 5 10 1000";
+			execute_command(c9);
+			char c10[100] = "load fib 300 1";
+			execute_command(c10);
+			char c11[100] = "load fib 300 1";
+			execute_command(c11);
+
+			execute_command(run_command);
+			break;
+	case 5 :
+			cprintf("\n[5] Run 2 instance of Fibonacci with different priorities AND VERY small threshold\n");
+			char c12[100] = "schedPRIRR 5 10 2";
+			execute_command(c12);
+			char c13[100] = "load fib 300 0";
+			execute_command(c13);
+			char c14[100] = "load fib 300 4";
+			execute_command(c14);
+
+			execute_command(run_command);
+			break;
+	case 6 :
+				cprintf("\n[6] Run 2 instance of Fibonacci with different priorities AND small threshold ,,then interrupted by large priority programe\n");
+				cprintf("\n*******************************************************************************************\n");
+				cprintf("\nshould intrerrupt \n");
+
+
+				char c15[100] = "schedPRIRR 5 10 10";
+				execute_command(c15);
+				char c16[100] = "load fib 300 0";
+				execute_command(c16);
+				char c17[100] = "load fib 300 2";
+				execute_command(c17);
+
+				execute_command(run_command);
+
+				char c18[100] = "run fib 300 4";
+				execute_command(c18);
+				break;
+	default:
+		cprintf("\nCongratulations!! test priority 1 completed successfully.\n");
+		break;
+
+	}
+
 #else
 	if(firstTime)
 	{
