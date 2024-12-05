@@ -252,6 +252,8 @@ void sched_init_PRIRR(uint8 numOfPriorities, uint8 quantum, uint32 starvThresh)
 	//panic("Not implemented yet");
 
 
+	if(numOfPriorities<0 || quantum < 0 ||starvThresh < 0)
+		return;
 
 	ProcessQueues.env_ready_queues = kmalloc(sizeof(struct Env_Queue)*numOfPriorities);
 
