@@ -916,12 +916,12 @@ int command_tst(int number_of_arguments, char **arguments)
 
 int schedPRIRR(int number_of_arguments, char **arguments)
 {
-	int32 numOfPriorities = strtol(arguments[1],NULL, 10);
+	uint8 numOfPriorities = strtol(arguments[1],NULL, 10);
 
-	int quantum = strtol(arguments[2], NULL, 10);
-	int starvThresh = strtol(arguments[3], NULL, 10);
+	uint8 quantum = strtol(arguments[2], NULL, 10);
+	uint32 starvThresh = strtol(arguments[3], NULL, 10);
 
-
+cprintf("\n starvThresh %d",starvThresh);
 	sched_init_PRIRR(numOfPriorities, quantum, starvThresh);
 	return 0;
 }

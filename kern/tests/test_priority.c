@@ -29,10 +29,10 @@ void test_priority_normal_and_higher()
 		cprintf("\n[1] Run 2 instance of Fibonacci with different priorities AND small threshold\n");
 		char command0[100] = "schedPRIRR 5 10 10";
 		execute_command(command0);
-		char command[100] = "load fib 100 0";
+		char command[100] = "load fib 300 4";
 		execute_command(command);
-		char command2[100] = "load fib 100 4";
-		execute_command(command2);
+		//char command2[100] = "load fib 300 1";
+		//execute_command(command2);
 		char print_com[100] = "printall";
 				execute_command(print_com);
 		//char run_command[100] = "runall";

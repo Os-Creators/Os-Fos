@@ -286,9 +286,6 @@ void sched_run_env(uint32 envId)
 			if(ptr_env == NULL)
 				cprintf("0");
 			sched_insert_ready(ptr_env);
-			cprintf("111111111111111111111111111111");
-			char print_com[100] = "printall";
-			execute_command(print_com);
 
 			/*2015*///if scheduler not run yet, then invoke it!
 			if (mycpu()->scheduler_status == SCH_STOPPED)
