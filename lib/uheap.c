@@ -192,6 +192,7 @@ void free(void* virtual_address)
 		user_pages_arr[pageIndex + num_of_pages -1].is_first_addr = 0;
 
 		//un_map the pages
+		cprintf("IN FREE %x\n",virtual_address);
 		sys_free_user_mem((uint32)virtual_address,(user_pages_arr[pageIndex].number_of_pages*PAGE_SIZE));
 
 		//before my block is empty
@@ -498,8 +499,9 @@ void sfree(void* virtual_address)
 
 	int ID = user_pages_arr[pageIndex].ID_shared;
 	user_pages_arr[pageIndex].ID_shared = -1;
+	cprintf("BEFORE free %x\n",va);
 	free((void*)va);
-	//cprintf("ID in sfree %d\n",ID);
+	cprintf("ID in sfree %d\n",ID);
 	//cprintf("index in sfree %d\n",pageIndex);
 
 	//va &= 0x7FFFFFFF;

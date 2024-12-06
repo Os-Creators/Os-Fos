@@ -321,4 +321,7 @@ void sys_allocate_user_mem(uint32 virtual_address, uint32 size)
 	syscall(SYS_allocate_user_mem,(uint32)virtual_address,(uint32)size,0,0,0);
 
 }
+void sys_init_queue(struct Env_Queue* queue){
+	syscall(SYS_init_queue,(struct Env_queue)queue,0,0,0,0);
+}
 
