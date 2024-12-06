@@ -1,3 +1,5 @@
+/* See COPYRIGHT for copyright information. */
+
 #ifndef FOS_INC_ENV_H
 #define FOS_INC_ENV_H
 
@@ -117,12 +119,6 @@ struct Env {
 									//(to be dynamically allocated during the process creation)
 									//Its first page is ALWAYS used as a GUARD PAGE (i.e. unmapped)
 
-	//=======================================================================
-	//TODO: [PROJECT'24.MS2 - #10] [3] USER HEAP - add suitable code here
-	uint32* start;
-	uint32* hardlimit;
-	uint32* segment_break;
-	//=======================================================================
 	//for page file management
 	uint32* disk_env_pgdir;
 	//2016
