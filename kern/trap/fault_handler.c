@@ -250,26 +250,31 @@ void page_fault_handler(struct Env * faulted_env, uint32 fault_va)
 	//panic("page_fault_handler().PLACEMENT is not implemented yet...!!");
     // Functions to check if my page is stack or heap
 	// allocate , map -> ws ele(kmalloc -> alloc,map)
+
 	 struct WorkingSetElement *new_element = env_page_ws_list_create_element(faulted_env , fault_va);
 	 LIST_INSERT_TAIL(&(faulted_env->page_WS_list), new_element);
+
 	 uint32 size = LIST_SIZE(&(faulted_env->page_WS_list));
 	 if (size == faulted_env->page_WS_max_size)
 	 {
 	 	 faulted_env->page_last_WS_element = LIST_FIRST(&(faulted_env->page_WS_list));
-	  }
-	  else
+	 }
+	 else
 	 {
 	 	 faulted_env->page_last_WS_element = NULL;
 	 }
+
 	 int status= pf_read_env_page(faulted_env,(void*)fault_va);
+
 	 uint32 *ptr_page_table;
 	 struct FrameInfo *Frame_Info;
 	 uint32 faulted_page = allocate_frame(&Frame_Info);
-	 if(status==E_PAGE_NOT_EXIST_IN_PF)
+
+	 if(status == E_PAGE_NOT_EXIST_IN_PF)
 	 {
    	   if (is_stack_address(fault_va) == 1 || is_heap_address(fault_va) == 1)
 	   {
-   		 map_frame(faulted_env->env_page_directory,Frame_Info,fault_va,PERM_WRITEABLE | PERM_USER);
+   		   map_frame(faulted_env->env_page_directory,Frame_Info,fault_va,PERM_WRITEABLE | PERM_USER);
 	   }
 	  else
 	   {
@@ -286,10 +291,63 @@ void page_fault_handler(struct Env * faulted_env, uint32 fault_va)
 	else
 	{
 		//cprintf("REPLACEMENT=========================WS Size = %d\n", wsSize );
-		//refer to the project presentation and documentation for details
 		//TODO: [PROJECT'24.MS3] [2] FAULT HANDLER II - Replacement
-		// Write your code here, remove the panic and write your code
-		panic("page_fault_handler() Replacement is not implemented yet...!!");
+
+		//setPageReplacmentAlgorithmNchanceCLOCK(2);
+
+		// 0 --> Normal mode (clean)
+		// 1 --> Modified mode (dirty)
+		bool mode = (page_WS_max_sweeps > 0)? 0 : 1;
+
+		//cprintf("before, N = %d \n",page_WS_max_sweeps);
+		//env_page_ws_print(faulted_env);
+		//cprintf("\n");
+
+
+		while(1==1)
+		{
+			int permissions = pt_get_page_permissions(faulted_env->env_page_directory,faulted_env->page_last_WS_element->virtual_address);
+			//cprintf("Outside CONDITION \n");
+			if(checkVictimPage(mode,faulted_env,permissions))
+			{
+				//cprintf("INSIDE CONDITION 1 \n");
+				replace(faulted_env, permissions, fault_va);
+				break;
+			}
+			else
+			{
+				//cprintf("INSIDE CONDITION 2 \n");
+				if((permissions & PERM_USED) == PERM_USED) // used bit = 1
+				{
+					//cprintf("INSIDE CONDITION 3 \n");
+					pt_set_page_permissions(faulted_env->env_page_directory, faulted_env->page_last_WS_element->virtual_address, 0, PERM_USED);
+					faulted_env->page_last_WS_element->sweeps_counter = 0;
+
+				}
+				else // used bit = 0
+				{
+					//cprintf("INSIDE CONDITION 4 \n");
+					faulted_env->page_last_WS_element->sweeps_counter++;
+					if(checkVictimPage(mode,faulted_env,permissions))
+					{
+						//cprintf("INSIDE CONDITION 5 \n");
+						replace(faulted_env, permissions, fault_va);
+						//cprintf("INSIDE CONDITION 6 \n");
+						break;
+					}
+				}
+			}
+
+			update_pointer(faulted_env);
+
+			//cprintf("durning \n");
+			//env_page_ws_print(faulted_env);
+			//cprintf("\n");
+		}
+
+		//cprintf("after \n");
+		//env_page_ws_print(faulted_env);
+		cprintf("\n");
 	}
 }
 
@@ -299,7 +357,7 @@ void __page_fault_handler_with_buffering(struct Env * curenv, uint32 fault_va)
 	// your code is here, remove the panic and write your code
 	panic("__page_fault_handler_with_buffering() is not implemented yet...!!");
 }
- int is_stack_address(uint32 address)
+int is_stack_address(uint32 address)
  { // check =
     if (address < USTACKTOP && address >= USTACKBOTTOM) //check
     {
@@ -310,7 +368,7 @@ void __page_fault_handler_with_buffering(struct Env * curenv, uint32 fault_va)
 	   return 0;
    }
  }
- int is_heap_address(uint32 address)
+int is_heap_address(uint32 address)
  {
      if (address >= USER_HEAP_START && address < USER_HEAP_MAX)
      {
@@ -322,3 +380,119 @@ void __page_fault_handler_with_buffering(struct Env * curenv, uint32 fault_va)
 	}
 
   }
+
+/////////////////////////////////////////////////////// Helper functions
+
+void update_pointer(struct Env* faulted_env)
+{
+	 struct WorkingSetElement* last_element = LIST_LAST(&(faulted_env->page_WS_list));
+
+	// cprintf("last ele = %p , page_last_WS_ele = %p",last_element,faulted_env->page_last_WS_element);
+
+	 if (last_element == faulted_env->page_last_WS_element)
+	 {
+	 	 faulted_env->page_last_WS_element = LIST_FIRST(&(faulted_env->page_WS_list));
+	 }
+	 else
+	 {
+	 	 faulted_env->page_last_WS_element = LIST_NEXT(faulted_env->page_last_WS_element);
+	 }
+}
+
+bool checkVictimPage(bool mode,struct Env* faulted_env, int perms)
+{
+
+	if((perms & PERM_USED) == PERM_USED)
+	{
+		faulted_env->page_last_WS_element->sweeps_counter = 0;
+		return 0;
+	}
+	uint32 sweeps = faulted_env->page_last_WS_element->sweeps_counter;
+
+	if(mode == 1) // Modified mode
+	{
+		if(((perms & PERM_MODIFIED) == PERM_MODIFIED) && (sweeps == abs(page_WS_max_sweeps) + 1))
+		{
+			return 1;
+		}
+		else if(!((perms & PERM_MODIFIED) == PERM_MODIFIED) && (sweeps == abs(page_WS_max_sweeps)))
+		{
+			return 1;
+		}
+		else
+		{
+			return 0;
+		}
+	}
+	else // Normal mode
+	{
+		if(sweeps == abs(page_WS_max_sweeps))
+		{
+			return 1;
+		}
+		else
+		{
+			return 0;
+		}
+	}
+}
+void replace(struct Env* faulted_env, int perms, uint32 fault_va)
+{
+	struct WorkingSetElement* victim = faulted_env->page_last_WS_element;
+	uint32 * ptr_page_table;
+	struct FrameInfo* victim_page_frame_info= get_frame_info(faulted_env->env_page_directory, victim->virtual_address, &ptr_page_table);
+
+	remove_victim(faulted_env, perms, victim, victim_page_frame_info);
+
+	//cprintf("INSIDE CONDITION 7 \n");
+
+	// mapping in the new va
+	// update data
+	pt_set_page_permissions(faulted_env->env_page_directory, victim->virtual_address, PERM_USED, 0);
+	victim->sweeps_counter = 0;
+	victim ->virtual_address=fault_va;
+
+	struct FrameInfo *Frame_Info;
+	uint32 faulted_page = allocate_frame(&Frame_Info);
+	map_frame(faulted_env->env_page_directory,Frame_Info,fault_va,PERM_WRITEABLE | PERM_USER);
+
+	// read from disk
+
+	int ret = pf_read_env_page(faulted_env,(void*)fault_va);
+
+	if(ret == E_PAGE_NOT_EXIST_IN_PF)
+	{
+	  cprintf("didnot read from disk \n");
+	}
+	else
+	{
+		cprintf("read from disk \n");
+	}
+
+	//cprintf("read from disk \n");
+
+	//cprintf("INSIDE CONDITION ret = %d \n",ret);
+
+	update_pointer(faulted_env);
+
+}
+void remove_victim(struct Env* faulted_env, int perms ,struct WorkingSetElement* victim, struct FrameInfo* modified_page_frame_info )
+{
+	//cprintf("buff = %d",isBufferingEnabled());
+
+	if((perms & PERM_MODIFIED) == PERM_MODIFIED) //|| is_stack_address(victim->virtual_address) == 1 || is_heap_address(victim->virtual_address) == 1)
+	{
+		int ret = pf_update_env_page(faulted_env, victim->virtual_address, modified_page_frame_info);
+		 pt_set_page_permissions(faulted_env->env_page_directory, victim->virtual_address, 0, PERM_MODIFIED);
+		 if(ret == 0) cprintf("wrote on disk \n");
+		 else  cprintf("didnot write on disk \n");
+	}
+
+	unmap_frame(faulted_env->env_page_directory, victim->virtual_address);
+}
+
+int abs(int x)
+{
+    return x >= 0 ? x : (-1*x);
+}
+

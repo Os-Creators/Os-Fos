@@ -283,7 +283,7 @@ void free_share(struct Share* ptrShare)
 
   kfree(ptrShare->framesStorage);
   kfree(ptrShare);
-  cprintf("free share");
+  cprintf("free share\n");
 
 }
 
@@ -301,6 +301,7 @@ int freeSharedObject(int32 sharedObjectID, void *startVA)
 	//	Unmap it from the current process
 	//	If page table(s) become empty, remove it
 
+	cprintf("HELLO IN FREE SHARED OBJECT\n");
 	  if(holding_spinlock(&(AllShares.shareslock))==0)acquire_spinlock(&(AllShares.shareslock));
 
 	  struct Share* sObject;
@@ -332,9 +333,7 @@ int freeSharedObject(int32 sharedObjectID, void *startVA)
 
 	      uint32 *ptr_page_table;
 	      int ret = get_page_table(myenv->env_page_directory,start,&ptr_page_table);
-
-		  //cprintf(" %d ",ret);
-	      //cprintf("here 1\n");
+	      cprintf("RETURN GET PAGE TABLE %d\n",ret);
 	      if(myenv->env_page_directory[PDX((uint32*)start)] != 0)
 	      {
 	    	  bool empty = 1;
@@ -377,6 +376,8 @@ int freeSharedObject(int32 sharedObjectID, void *startVA)
 
 	   if(sObject->references == 0)
 		   free_share(sObject);
+
+
 
 	   if(holding_spinlock(&(AllShares.shareslock))==1)release_spinlock(&(AllShares.shareslock));
 

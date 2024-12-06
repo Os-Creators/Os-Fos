@@ -72,5 +72,9 @@ void page_fault_handler(struct Env * curenv, uint32 fault_va);
 void table_fault_handler(struct Env * curenv, uint32 fault_va);
 int is_heap_address(uint32 address);
 int is_stack_address(uint32 address);
-
+bool checkVictimPage(bool mode,struct Env* faulted_env, int perms);
+void update_pointer(struct Env* faulted_env);
+void replace(struct Env* faulted_env, int perms , uint32 fault_va);
+void remove_victim(struct Env* faulted_env, int perms ,struct WorkingSetElement* victim, struct FrameInfo* modified_page_frame_info);
+int abs(int x);
 #endif /* KERN_FAULT_HANDLER_H_ */

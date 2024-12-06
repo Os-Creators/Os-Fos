@@ -361,7 +361,6 @@ unsigned int kheap_physical_address(unsigned int virtual_address)
 
 //	A call with virtual_address = null is equivalent to kmalloc().
 //	A call with new_size = zero is equivalent to kfree().
-
 void *krealloc(void *virtual_address, uint32 new_size)
 {
 	//[PROJECT'24.MS2 BONUS2] Kernel Heap Realloc
@@ -548,8 +547,6 @@ void *krealloc(void *virtual_address, uint32 new_size)
 
 	return NULL;
 }
-
-
 //=================================================================================//
 //============================== OUR HELPER FUNCTIONS =============================//
 //=================================================================================//

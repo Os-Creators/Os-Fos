@@ -378,8 +378,18 @@ void sys_set_uheap_strategy(uint32 heapStrategy)
 /* SEMAPHORES SYSTEM CALLS */
 /*******************************/
 //[PROJECT'24.MS3] ADD SUITABLE CODE HERE
+void sys_init_queue(struct Env_Queue* queue){
 
+	return init_queue(queue);
+}
+void sys_enqueue(struct Env_Queue* queue, struct Env* env){
 
+	return enqueue(queue, env);
+}
+struct Env* sys_dequeue(struct Env_Queue* queue){
+
+	return dequeue(queue);
+}
 /*******************************/
 /* SHARED MEMORY SYSTEM CALLS */
 /*******************************/
@@ -711,11 +721,21 @@ uint32 syscall(uint32 syscallno, uint32 a1, uint32 a2, uint32 a3, uint32 a4, uin
 			sys_allocate_user_mem((uint32) a1, (uint32) a2);
 			return 0;
 			break; //  is void return 0 & break/return 0|| break?
-
-
+	case SYS_init_queue:
+		    sys_init_queue((struct Env_Queue*)a1);
+		    return 0;
+		    break;
+	case SYS_enqueue:
+		    sys_enqueue((struct Env_Queue*)a1,(struct Env*)a2);
+		    return 0;
+		    break;
+	case SYS_dequeue:
+		    sys_dequeue((struct Env_Queue*)a1);
+		    return 0;
+		    break;
 	case NSYSCALLS:
-		return 	-E_INVAL;
-		break;
+		    return 	-E_INVAL;
+		    break;
 	}
 	//panic("syscall not implemented");
 	return -E_INVAL;
