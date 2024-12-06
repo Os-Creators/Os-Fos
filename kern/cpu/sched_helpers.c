@@ -285,6 +285,7 @@ void sched_run_env(uint32 envId)
 			sched_remove_new(ptr_env);
 			if(ptr_env == NULL)
 				cprintf("0");
+			ptr_env->env_ticks = ticks;//shimaa
 			sched_insert_ready(ptr_env);
 
 			/*2015*///if scheduler not run yet, then invoke it!
@@ -542,6 +543,8 @@ void sched_run_all()
 	for (int i = 0; i < q_size; ++i)
 	{
 		ptr_env = dequeue(&ProcessQueues.env_new_queue);
+		ptr_env->env_ticks = ticks;
+		//cprintf("\nin run all ,env ticks %d , ticks%d",ptr_env->env_ticks,ticks);
 		sched_insert_ready(ptr_env);
 	}
 

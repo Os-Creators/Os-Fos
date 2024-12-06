@@ -27,14 +27,20 @@ void test_priority_normal_and_higher()
 	switch(test_num){
 	case 1 :
 		cprintf("\n[1] Run 2 instance of Fibonacci with different priorities AND small threshold\n");
-		char command0[100] = "schedPRIRR 5 10 10";
+		cprintf("\n ********************************\n");
+		cprintf("\n TO DO: when asking fib index ENTER 20 , second time will be fine if 2(as you like)\n");
+		cprintf("\n ********************************\n");
+		cprintf("\n EXPECTED: first fib1 must by interrupted by fib2 and both results printed at the end\n");
+
+
+		char command0[100] = "schedPRIRR 5 10 9";
 		execute_command(command0);
-		char command[100] = "load fib 300 4";
+		char command[100] = "load fib 300 1";
 		execute_command(command);
-		//char command2[100] = "load fib 300 1";
-		//execute_command(command2);
-		char print_com[100] = "printall";
-				execute_command(print_com);
+		char command2[100] = "load fib 300 0";
+		execute_command(command2);
+//		char print_com[100] = "printall";
+//				execute_command(print_com);
 		//char run_command[100] = "runall";
 		execute_command(run_command);
 		break;

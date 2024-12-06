@@ -86,12 +86,15 @@ fos_scheduler(void)
 		{
 			//Get next env according to the current scheduler
 			next_env = sched_next[scheduler_method]() ;
-
+			if(next_env != NULL)
+			cprintf("\nnext id %d",next_env->env_id);
 			//temporarily set the curenv by the next env JUST for checking the scheduler
 			//Then: reset it again
 			struct Env* old_curenv = get_cpu_proc();
 			set_cpu_proc(next_env) ;
 			chk2(next_env) ;
+			if(old_curenv != NULL)
+			cprintf("\n old_curenv id %d",old_curenv->env_id);
 
 			set_cpu_proc(old_curenv) ;
 
@@ -367,15 +370,14 @@ struct Env* fos_scheduler_PRIRR()
 
 		struct Env *cur_env = get_cpu_proc();
 		cprintf("\n4");
-		int limit =num_of_ready_queues;
 		//if(holding_spinlock(&ProcessQueues.qlock)==0) acquire_spinlock(&ProcessQueues.qlock);
 
 		if(cur_env != NULL){
 			sched_insert_ready(cur_env);
-			//limit = cur_env->priority+1;
+			cur_env->env_ticks = ticks;
 		}
 
-		for (int i = 0 ; i < limit  ;i++)
+		for (int i = 0 ; i < num_of_ready_queues  ;i++)
 		{
 			cprintf("\n3");
 
@@ -417,7 +419,7 @@ struct Env* fos_scheduler_PRIRR()
 void clock_interrupt_handler(struct Trapframe* tf)
 {
 	cprintf("\n in clock");
-	cprintf("\nstarrrrrrr,%d",StarvThresh);
+	//cprintf("\nstarrrrrrr,%d",StarvThresh);
 	if (isSchedMethodPRIRR())
 	{
 		//TODO: [PROJECT'24.MS3 - #09] [3] PRIORITY RR Scheduler - clock_interrupt_handler
@@ -430,8 +432,7 @@ void clock_interrupt_handler(struct Trapframe* tf)
 
 		//if(holding_spinlock(&ProcessQueues.qlock)==0) acquire_spinlock(&ProcessQueues.qlock);
 		int in_tck = 0;
-		char print_com[100] = "printall";
-		execute_command(print_com);
+
 		int in_cs = 0;
 		if(holding_spinlock(&ProcessQueues.qlock)==0) {
 			acquire_spinlock(&ProcessQueues.qlock);
@@ -442,21 +443,23 @@ void clock_interrupt_handler(struct Trapframe* tf)
 
 			LIST_FOREACH(v,&ProcessQueues.env_ready_queues[i]){
 				int proc_clocks = v->nClocks;
-				cprintf("\timer_ticks,%d",timer_ticks());
-				if(timer_ticks()>StarvThresh){
+				cprintf("\n timer_ticks,%d",timer_ticks());
+				cprintf("\n\n env ticks %d",v->env_ticks);
+				if((ticks-(v->env_ticks))>StarvThresh){
 					//critical_section
 
 
 					sched_remove_ready(v);
 					v->priority--;
+					v->env_ticks = ticks;
+					cprintf("\n\n env id %d ,env pri %d",v->env_id,v->priority);
 					sched_insert_ready(v);
+
 					cprintf("doneeeeeeeee clock");
 					if(holding_spinlock(&ProcessQueues.qlock)==1 && in_cs) release_spinlock(&ProcessQueues.qlock);
-					cprintf("\nin clock 3");
+					//cprintf("\nin clock 3");
 
-					char print_com[100] = "printall";
-					execute_command(print_com);
-					in_tck = 1;
+					//in_tck = 1;
 					/*promoted_item=dequeue(&(ProcessQueues.env_ready_queues[i]));
 					enqueue(&ProcessQueues.env_ready_queues[i-1],promoted_item);*/
 					//critical_section
@@ -466,7 +469,7 @@ void clock_interrupt_handler(struct Trapframe* tf)
 		}
 		if(holding_spinlock(&ProcessQueues.qlock)==1 && in_cs) release_spinlock(&ProcessQueues.qlock);
 
-		if(in_tck)ticks = 0;
+		//if(in_tck)ticks = 0;
 		//if(holding_spinlock(&ProcessQueues.qlock)==1) release_spinlock(&ProcessQueues.qlock);
 		//return;
 
