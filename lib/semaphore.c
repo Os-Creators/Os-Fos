@@ -104,7 +104,6 @@ void signal_semaphore(struct semaphore sem)
 		{
 		//Unblock process P from blocked process and place process P on ready list//
 		    env->env_status = ENV_READY;
-		    //sys_run_env(env->env_id);
 		    sys_sched_insert_ready0(env);
 		    sem.semdata->lock = 0;
 			return;
