@@ -498,14 +498,13 @@ void sfree(void* virtual_address)
 
 	int ID = user_pages_arr[pageIndex].ID_shared;
 	user_pages_arr[pageIndex].ID_shared = -1;
+
 	free((void*)va);
 	//cprintf("ID in sfree %d\n",ID);
 	//cprintf("index in sfree %d\n",pageIndex);
-
 	//va &= 0x7FFFFFFF;
 
 	sys_freeSharedObject(ID,(void*)va);
-
 
 }
 
