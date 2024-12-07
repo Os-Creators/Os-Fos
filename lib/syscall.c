@@ -299,19 +299,41 @@ void sys_utilities(char* utilityName, int value)
 void* sys_sbrk(int increment)
 {
 	//Comment the following line before start coding...
-	panic("not implemented yet");
-	return NULL;
+	//panic("not implemented yet");
+	//return NULL;
+	return (void*) syscall(SYS_sbrk,increment, 0, 0, 0, 0);
+	syscall(SYS_sbrk,increment, 0, 0, 0, 0);
+
 }
 
 void sys_free_user_mem(uint32 virtual_address, uint32 size)
 {
 	//Comment the following line before start coding...
-	panic("not implemented yet");
+	//panic("not implemented yet");
+	syscall(SYS_free_user_mem,(uint32) virtual_address,(uint32)size,0,0,0);
+
 }
 
 void sys_allocate_user_mem(uint32 virtual_address, uint32 size)
 {
 	//Comment the following line before start coding...
-	panic("not implemented yet");
-}
+	//panic("not implemented yet");
+	syscall(SYS_allocate_user_mem,(uint32)virtual_address,(uint32)size,0,0,0);
 
+}
+void sys_init_queue(struct Env_Queue* queue){
+
+	syscall(SYS_init_queue,(uint32)queue,0,0,0,0);
+}
+void sys_enqueue(struct Env_Queue* queue, struct Env* env){
+
+	syscall(SYS_enqueue,(uint32)queue,(uint32)env,0,0,0);
+}
+struct Env* sys_dequeue(struct Env_Queue* queue){
+
+	syscall(SYS_dequeue,(uint32)queue,0,0,0,0);
+	return 0;
+}
+void sys_sched_insert_ready0(struct Env* env){
+	syscall(SYS_ins_ready,(uint32)env,0,0,0,0);
+}

@@ -5,7 +5,6 @@
 #include <inc/types.h>
 #include <inc/queue.h>
 #include <inc/mmu.h>
-//#include <inc/dynamic_allocator.h>
 
 #endif /* not __ASSEMBLER__ */
 
@@ -15,7 +14,8 @@
  */
 
 /*2016*/
-#define USE_KHEAP 0
+#define PGFLTEMP (UTEMP - PAGE_SIZE)
+#define USE_KHEAP 1
 
 // Global descriptor numbers
 #define GD_KT     0x08     // kernel text
@@ -211,6 +211,7 @@ struct FrameInfo {
 	// frames allocated at boot time using memory_manager.c's
 	// boot_allocate_space do not have valid reference count fields.
 	uint16 references;
+	uint32 page_num;
 
 	struct Env *proc;
 	uint32 bufferedVA;
@@ -219,3 +220,4 @@ struct FrameInfo {
 
 #endif /* !__ASSEMBLER__ */
 #endif /* !FOS_INC_MEMLAYOUT_H */
+
