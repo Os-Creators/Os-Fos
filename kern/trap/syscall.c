@@ -390,6 +390,10 @@ struct Env* sys_dequeue(struct Env_Queue* queue){
 
 	return dequeue(queue);
 }
+void sys_sched_insert_ready0(struct Env* env){
+
+	return sched_insert_ready0(env);
+}
 /*******************************/
 /* SHARED MEMORY SYSTEM CALLS */
 /*******************************/
@@ -731,6 +735,10 @@ uint32 syscall(uint32 syscallno, uint32 a1, uint32 a2, uint32 a3, uint32 a4, uin
 		    break;
 	case SYS_dequeue:
 		    sys_dequeue((struct Env_Queue*)a1);
+		    return 0;
+		    break;
+	case SYS_ins_ready:
+		    sys_sched_insert_ready0((struct Env*) a1);
 		    return 0;
 		    break;
 	case NSYSCALLS:
