@@ -714,28 +714,30 @@ void env_set_priority(int envID, int priority)
 	ret = envid2env(envID, &proc, 0);
 
 	if(ret == E_BAD_ENV)
-		return;
+		panic("Env id not found ");
 	//Your code is here
 	//Comment the following line
 	//panic("Not implemented yet");
 
 	if(priority >= num_of_ready_queues)
-		return;
+		panic("requested priority is more than the max priority, the max is %d ",num_of_ready_queues);
 
+	if(priority < 0)
+		panic("requested priority must be positive");
 
-	//what if priority is the same -> 1)no thing 2)put at the end of the queue
 	if(proc->priority == priority){
-		//?????
+		return;
 	}
-
-	proc->priority = priority;
 
 	//C.S.
 	if(holding_spinlock(&ProcessQueues.qlock)==0) acquire_spinlock(&ProcessQueues.qlock);
 
 	if( proc -> env_status == ENV_READY){
 		sched_remove_ready(proc);
+		proc->priority = priority;
 		sched_insert_ready(proc);
+	}else{
+		proc->priority = priority;
 	}
 
     if(holding_spinlock(&ProcessQueues.qlock)==1) release_spinlock(&ProcessQueues.qlock);

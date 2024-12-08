@@ -86,15 +86,12 @@ fos_scheduler(void)
 		{
 			//Get next env according to the current scheduler
 			next_env = sched_next[scheduler_method]() ;
-			if(next_env != NULL)
-			cprintf("\nnext id %d",next_env->env_id);
+
 			//temporarily set the curenv by the next env JUST for checking the scheduler
 			//Then: reset it again
 			struct Env* old_curenv = get_cpu_proc();
 			set_cpu_proc(next_env) ;
 			chk2(next_env) ;
-			if(old_curenv != NULL)
-			cprintf("\n old_curenv id %d",old_curenv->env_id);
 
 			set_cpu_proc(old_curenv) ;
 
@@ -257,22 +254,26 @@ void sched_init_PRIRR(uint8 numOfPriorities, uint8 quantum, uint32 starvThresh)
 
 
 	if(numOfPriorities<0 || quantum < 0 ||starvThresh < 0)
-		return;
+		panic("it must be positive number");
 
+	//initiaize ready queues
 	ProcessQueues.env_ready_queues = kmalloc(sizeof(struct Env_Queue)*numOfPriorities);
-
-	quantums = kmalloc(sizeof(uint8)) ;
-	quantums[0] = quantum;
-	kclock_set_quantum(quantums[0]);
 
 	for(int i = 0 ; i< numOfPriorities ; i++){
 		init_queue(&(ProcessQueues.env_ready_queues[i]));
 	}
 
+	//initialize quantum
+	quantums = kmalloc(sizeof(uint8)) ;
+	quantums[0] = quantum;
+	kclock_set_quantum(quantums[0]);
+
+
+
 	num_of_ready_queues = numOfPriorities;
 	//StarvThresh = starvThresh;
-	sched_set_starv_thresh( starvThresh);
-	cprintf("\n our starve %d",StarvThresh);
+	sched_set_starv_thresh(starvThresh);
+
 	//=========================================
 	//DON'T CHANGE THESE LINES=================
 	uint16 cnt0 = kclock_read_cnt0_latch() ; //read after write to ensure it's set to the desired value
@@ -366,48 +367,25 @@ struct Env* fos_scheduler_PRIRR()
 	//Comment the following line
 	//panic("Not implemented yet");
 	struct Env *next_env = NULL;
-	cprintf("\n5");
 
-		struct Env *cur_env = get_cpu_proc();
-		cprintf("\n4");
-		//if(holding_spinlock(&ProcessQueues.qlock)==0) acquire_spinlock(&ProcessQueues.qlock);
+	struct Env *cur_env = get_cpu_proc();
 
-		if(cur_env != NULL){
-			sched_insert_ready(cur_env);
-			cur_env->env_ticks = ticks;
-		}
+	if(cur_env != NULL){
+		cur_env->env_ticks = timer_ticks();
+		sched_insert_ready(cur_env);
+	}
 
-		for (int i = 0 ; i < num_of_ready_queues  ;i++)
+	for (int i = 0 ; i < num_of_ready_queues  ;i++)
+	{
+		if(ProcessQueues.env_ready_queues[i].size > 0)
 		{
-			cprintf("\n3");
+			kclock_set_quantum(quantums[0]);
 
-			if(ProcessQueues.env_ready_queues[i].size > 0)
-			{
-				cprintf("\n2");
+			next_env = dequeue(&(ProcessQueues.env_ready_queues[i]));
 
-				kclock_set_quantum(quantums[0]);
-
-				//acquire_spinlock(&(ProcessQueues.qlock));
-
-				next_env = dequeue(&(ProcessQueues.env_ready_queues[i]));
-
-				//release_spinlock(&ProcessQueues.qlock);
-				cprintf("\n1");
-			    //if(holding_spinlock(&ProcessQueues.qlock)==1) release_spinlock(&ProcessQueues.qlock);
-			    cprintf("doneeeeeeeee sched2");
-			    cprintf("is holdedddddd%d",holding_spinlock(&ProcessQueues.qlock));
-
-					return next_env;
-			 }
-		}
-		cprintf("doneeeeeeeee sched");
-//		if(cur_env != NULL){
-//			sched_remove_ready(cur_env);
-//			return cur_env;
-//		}
-
-
-	    //if(holding_spinlock(&ProcessQueues.qlock)==1) release_spinlock(&ProcessQueues.qlock);
+			return next_env;
+		 }
+	}
 
   return NULL;
 }
@@ -418,8 +396,7 @@ struct Env* fos_scheduler_PRIRR()
 //========================================
 void clock_interrupt_handler(struct Trapframe* tf)
 {
-	cprintf("\n in clock");
-	//cprintf("\nstarrrrrrr,%d",StarvThresh);
+
 	if (isSchedMethodPRIRR())
 	{
 		//TODO: [PROJECT'24.MS3 - #09] [3] PRIORITY RR Scheduler - clock_interrupt_handler
@@ -427,51 +404,33 @@ void clock_interrupt_handler(struct Trapframe* tf)
 		//Comment the following line
 		//panic("Not implemented yet");
 		struct Env *promoted_item;
-		//int64 x=timer_ticks();
-		//struct Env *v = get_cpu_proc();
-
-		//if(holding_spinlock(&ProcessQueues.qlock)==0) acquire_spinlock(&ProcessQueues.qlock);
-		int in_tck = 0;
-
 		int in_cs = 0;
+
+
 		if(holding_spinlock(&ProcessQueues.qlock)==0) {
 			acquire_spinlock(&ProcessQueues.qlock);
-			in_cs = 1;
+			in_cs = 1;//notify that i am who acquired the lock not outside function
 		}
+
 		for(int i=1;i<num_of_ready_queues;i++){
 			struct Env *v;
 
 			LIST_FOREACH(v,&ProcessQueues.env_ready_queues[i]){
-				int proc_clocks = v->nClocks;
-				cprintf("\n timer_ticks,%d",timer_ticks());
-				cprintf("\n\n env ticks %d",v->env_ticks);
-				if((ticks-(v->env_ticks))>StarvThresh){
-					//critical_section
-
+				uint32 waited_ticks = (timer_ticks()-(v->env_ticks));
+				if(waited_ticks>StarvThresh){
 
 					sched_remove_ready(v);
 					v->priority--;
 					v->env_ticks = ticks;
-					cprintf("\n\n env id %d ,env pri %d",v->env_id,v->priority);
 					sched_insert_ready(v);
 
-					cprintf("doneeeeeeeee clock");
-					if(holding_spinlock(&ProcessQueues.qlock)==1 && in_cs) release_spinlock(&ProcessQueues.qlock);
-					//cprintf("\nin clock 3");
 
-					//in_tck = 1;
-					/*promoted_item=dequeue(&(ProcessQueues.env_ready_queues[i]));
-					enqueue(&ProcessQueues.env_ready_queues[i-1],promoted_item);*/
-					//critical_section
-					//ProcessQueues.env_ready_queues[i-1]=ProcessQueues.env_ready_queues[i];
+					if(holding_spinlock(&ProcessQueues.qlock)==1 && in_cs) release_spinlock(&ProcessQueues.qlock);
+
 				}
 			}
 		}
 		if(holding_spinlock(&ProcessQueues.qlock)==1 && in_cs) release_spinlock(&ProcessQueues.qlock);
-
-		//if(in_tck)ticks = 0;
-		//if(holding_spinlock(&ProcessQueues.qlock)==1) release_spinlock(&ProcessQueues.qlock);
-		//return;
 
 	}
 

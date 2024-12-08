@@ -921,7 +921,6 @@ int schedPRIRR(int number_of_arguments, char **arguments)
 	uint8 quantum = strtol(arguments[2], NULL, 10);
 	uint32 starvThresh = strtol(arguments[3], NULL, 10);
 
-cprintf("\n starvThresh %d",starvThresh);
 	sched_init_PRIRR(numOfPriorities, quantum, starvThresh);
 	return 0;
 }
