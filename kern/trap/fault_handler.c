@@ -162,17 +162,14 @@ void fault_handler(struct Trapframe *tf)
 
 		   if(!(fault_va>=0 && fault_va<USER_LIMIT) && user_access!=PERM_USER) //User
 		   {
-			   cprintf("exit1");
 			  env_exit();
 		   }
 		   if(fault_va>= USER_HEAP_START && fault_va<USER_HEAP_MAX && marked_page!=perm_available) // unmarked
 		   {
-			   cprintf("exit2");
 			 env_exit();
 		   }
 		   if(present==PERM_PRESENT && read_access!=PERM_WRITEABLE) // read
 		   {
-			   cprintf("exit3");
 			 env_exit();
 		   }
 			/*============================================================================================*/
@@ -279,7 +276,6 @@ void page_fault_handler(struct Env * faulted_env, uint32 fault_va)
 	  else
 	   {
 		  env_page_ws_invalidate(faulted_env,fault_va);
-		  cprintf("\n\n\n exit%d",faulted_env->env_id);
 		  env_exit();
 
 	   }
