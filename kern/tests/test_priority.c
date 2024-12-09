@@ -8,10 +8,149 @@
 extern int sys_calculate_free_frames();
 
 uint8 firstTime = 1;
+int test_num = 1;
 void test_priority_normal_and_higher()
 {
 #if USE_KHEAP
-	panic("not handled yet");
+
+
+	cprintf("\n which case to test?\n");
+	test_num = getchar();
+	cputchar(test_num);
+	test_num -= '0';
+
+	char run_command[100] = "runall";
+	switch(test_num){
+	case 1 :
+		cprintf("\n[1] Run 2 instance of Fibonacci with different priorities AND small threshold\n");
+		cprintf("********************************\n");
+		cprintf("TO DO: when asking fib index ENTER 30 , second time will be fine if 2(as you like)\n");
+		cprintf("********************************\n");
+		cprintf("EXPECTED: first fib1 must by interrupted by fib2 and both results printed at the end\n");
+		cprintf("********************************\n");
+
+
+		char command0[100] = "schedPRIRR 5 10 9";
+		execute_command(command0);
+		char command[100] = "load fib 300 1";
+		execute_command(command);
+		char command2[100] = "load fib 300 0";
+		execute_command(command2);
+//		char print_com[100] = "printall";
+//				execute_command(print_com);
+		//char run_command[100] = "runall";
+		execute_command(run_command);
+
+		break;
+	case 2 :
+			cprintf("\n[2] Run 2 instance of Fibonacci with different priorities AND large threshold\n");
+			cprintf("********************************\n");
+			cprintf("TO DO: when asking fib index ENTER 30 , second time can be any index \n");
+			cprintf("********************************\n");
+			cprintf("EXPECTED: first fib1 will continue till the end then fib2 \n");
+			cprintf("********************************\n");
+
+
+			char c1[100] = "schedPRIRR 5 10 1000";
+			execute_command(c1);
+			char c2[100] = "load fib 100 0";
+			execute_command(c2);
+			char c3[100] = "load fib 100 1";
+			execute_command(c3);
+
+			execute_command(run_command);
+
+			break;
+	case 3 :
+			cprintf("\n[3] Run 2 instance of Fibonacci with same priorities\n");
+			cprintf("********************************\n");
+			cprintf("TO DO & EXPECTED: with entering any large index the first process will be interrupted,, if too small then no interrupt\n");
+			cprintf("********************************\n");
+
+			char c9[100] = "schedPRIRR 5 10 1000";
+			execute_command(c9);
+			char c10[100] = "load fib 300 1";
+			execute_command(c10);
+			char c11[100] = "load fib 300 1";
+			execute_command(c11);
+
+			execute_command(run_command);
+			break;
+	case 4 :
+			cprintf("\n[4] Run 2 instance of Fibonacci with big different priorities AND small threshold\n");
+			cprintf("********************************\n");
+			cprintf("TO DO: when asking fib index ENTER 30 , second time will be fine if 2(as you like)\n");
+			cprintf("********************************\n");
+			cprintf("EXPECTED: first fib1 must by interrupted by fib2 and both results printed at the end\n");
+			cprintf("********************************\n");
+
+
+			char c20[100] = "schedPRIRR 5 10 9";
+			execute_command(c20);
+			char c21[100] = "load fib 300 4";
+			execute_command(c21);
+			char c22[100] = "load fib 300 0";
+			execute_command(c22);
+
+			execute_command(run_command);
+
+
+			break;
+	case 5 :
+			cprintf("\n[5] Run 2 different processes with different priorities AND large threshold\n");
+			cprintf("********************************\n");
+			cprintf("TO DO: when asking fib index ENTER 30 , second time can be any index \n");
+			cprintf("********************************\n");
+			cprintf("EXPECTED: first fib1 will continue till the end then fib2 \n");
+			cprintf("********************************\n");
+
+			char c23[100] = "schedPRIRR 5 10 1000";
+			execute_command(c23);
+			char c24[100] = "load fib 300 0";
+			execute_command(c24);
+			char c25[100] = "load fact 300 1";
+			execute_command(c25);
+
+			execute_command(run_command);
+			break;
+	case 6 :
+			cprintf("\n[6] Run 2 different processes with different priorities AND small threshold\n");
+			cprintf("********************************\n");
+			cprintf("TO DO: when asking fib index ENTER 30 , second time will be fine if 2(as you like)\n");
+			cprintf("********************************\n");
+			cprintf("EXPECTED: first fib1 must by interrupted by fib2 and both results printed at the end\n");
+			cprintf("********************************\n");
+
+			char c26[100] = "schedPRIRR 5 10 9";
+			execute_command(c26);
+			char c27[100] = "load fib 300 0";
+			execute_command(c27);
+			char c28[100] = "load fact 300 1";
+			execute_command(c28);
+
+			execute_command(run_command);
+			break;
+	case 7 :
+			cprintf("\n[7] Run 2 different processes with same priorities\n");
+			cprintf("********************************\n");
+			cprintf("TO DO & EXPECTED: with entering any large index the first process will be interrupted,, if too small then no interrupt\n");
+			cprintf("********************************\n");
+
+			char c29[100] = "schedPRIRR 5 10 1000";
+			execute_command(c29);
+			char c30[100] = "load fib 300 0";
+			execute_command(c30);
+			char c31[100] = "load fact 300 0";
+			execute_command(c31);
+
+			execute_command(run_command);
+			break;
+	default:
+		cprintf("\nCongratulations!! test priority 1 completed successfully.\n");
+		break;
+
+	}
+
 #else
 	if(firstTime)
 	{

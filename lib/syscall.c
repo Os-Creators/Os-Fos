@@ -321,4 +321,11 @@ void sys_allocate_user_mem(uint32 virtual_address, uint32 size)
 	syscall(SYS_allocate_user_mem,(uint32)virtual_address,(uint32)size,0,0,0);
 
 }
+void sys_env_set_priority(int32 envID,int priority)
+{
+	//Comment the following line before start coding...
+	//panic("not implemented yet");
 
+	syscall(SYS_env_set_priority,(uint32)envID,(uint32)priority,0,0,0);
+
+}

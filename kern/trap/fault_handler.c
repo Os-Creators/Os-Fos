@@ -12,6 +12,7 @@
 #include <kern/disk/pagefile_manager.h>
 #include <kern/mem/memory_manager.h>
 #include <kern/mem/kheap.h>
+struct sleeplock f_sleeplock;
 
 //2014 Test Free(): Set it to bypass the PAGE FAULT on an instruction with this length and continue executing the next one
 // 0 means don't bypass the PAGE FAULT
@@ -250,6 +251,7 @@ void page_fault_handler(struct Env * faulted_env, uint32 fault_va)
 	//panic("page_fault_handler().PLACEMENT is not implemented yet...!!");
     // Functions to check if my page is stack or heap
 	// allocate , map -> ws ele(kmalloc -> alloc,map)
+
 	 struct WorkingSetElement *new_element = env_page_ws_list_create_element(faulted_env , fault_va);
 	 LIST_INSERT_TAIL(&(faulted_env->page_WS_list), new_element);
 	 uint32 size = LIST_SIZE(&(faulted_env->page_WS_list));
@@ -274,7 +276,8 @@ void page_fault_handler(struct Env * faulted_env, uint32 fault_va)
 	  else
 	   {
 		  env_page_ws_invalidate(faulted_env,fault_va);
-	      env_exit();
+		  env_exit();
+
 	   }
 	 }
 	 else
