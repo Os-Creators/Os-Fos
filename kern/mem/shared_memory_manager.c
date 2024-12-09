@@ -14,6 +14,20 @@
 #include "kheap.h"
 #include "memory_manager.h"
 
+//struct sleeplock shared_sleeplock;
+
+
+//inline void sh_acquireSleep(struct sleeplock* k)
+//{
+//	//if(!holding_sleeplock(k))
+//		acquire_sleeplock(k);
+//}
+//
+//inline void sh_releaseSleep(struct sleeplock* k)
+//{
+//	//if(holding_sleeplock(k))
+//		release_sleeplock(k);
+//}
 //==================================================================================//
 //============================== GIVEN FUNCTIONS ===================================//
 //==================================================================================//
@@ -28,6 +42,7 @@ void sharing_init()
 #if USE_KHEAP
 	LIST_INIT(&AllShares.shares_list) ;
 	init_spinlock(&AllShares.shareslock, "shares lock");
+	init_sleeplock(&shared_sleeplock, "shared sleep lock");
 #else
 	panic("not handled when KERN HEAP is disabled");
 #endif
@@ -91,10 +106,13 @@ struct Share* create_share(int32 ownerID, char* shareName, uint32 size, uint8 is
 	//Your Code is Here...
 	//lamiaa_mahmoud 2022170597
 	struct Share* new_share = kmalloc(sizeof(struct Share));
+	//cprintf(", 2id %d, ",ownerID);
+
 	if (new_share == NULL)
 	{
 		return NULL;
 	}
+	//cprintf(", 3id %d, ",ownerID);
 
 	memset(new_share, 0, sizeof(struct Share));
 	new_share->ownerID = ownerID;
@@ -103,9 +121,12 @@ struct Share* create_share(int32 ownerID, char* shareName, uint32 size, uint8 is
 	new_share->size = ROUNDUP(size,PAGE_SIZE);
 	new_share->references = 1;
 	new_share->isWritable = isWritable;
+	//cprintf(", 4id %d, ",ownerID);
 
 	uint32 numFrames = ROUNDUP((size + PAGE_SIZE - 1),PAGE_SIZE) / PAGE_SIZE;
 	new_share->framesStorage = create_frames_storage(numFrames);
+	//cprintf(", 5id %d, ",ownerID);
+
 	if (new_share->framesStorage == NULL)
 	{
 	   kfree(new_share);
@@ -150,6 +171,8 @@ struct Share* get_share(int32 ownerID, char* name)
     {
       if (current_share->ownerID == ownerID && strcmp(current_share->name, name) == 0)
       {
+    	  cprintf("\n\n\nshare is exist , %d , name%s",ownerID,name);
+
     	 if(holding_spinlock(&AllShares.shareslock)) release_spinlock(&AllShares.shareslock);
     	 return current_share;
 
@@ -163,7 +186,7 @@ struct Share* get_share(int32 ownerID, char* name)
 
 
 }
-
+struct spinlock sh_spin;
 //=========================
 // [4] Create Share Object:
 //=========================
@@ -173,16 +196,33 @@ int createSharedObject(int32 ownerID, char* shareName, uint32 size, uint8 isWrit
 	//COMMENT THE FOLLOWING LINE BEFORE START CODING
 	//panic("createSharedObject is not implemented yet");
 	//Your Code is Here...
+	//if(!holding_spinlock(&(sh_spin))) acquire_spinlock(&sh_spin);
+	//if(!holding_spinlock(&(AllShares.shareslock))) acquire_spinlock(&(AllShares.shareslock));
 
+	//sh_acquireSleep(&shared_sleeplock);
 		struct Env* myenv = get_cpu_proc(); //The calling environment
+		//ownerID = myenv->env_id;
 		if(get_share(ownerID,shareName)!=NULL){
+			//if(holding_spinlock(&(sh_spin))) release_spinlock(&sh_spin);
+			//sh_releaseSleep(&shared_sleeplock);
+			release_sleeplock(&shared_sleeplock);
 			return	E_SHARED_MEM_EXISTS;
 		}
+		//cprintf(", 1id %d,calling %d ",ownerID,myenv->env_id);
 
 		struct Share* object=create_share(ownerID,shareName,size,isWritable);
-
+		//if(!strcmp(shareName, "x153")){
+			//cprintf("\n create share done name %s , env id %d ,calling %d",shareName,ownerID,myenv->env_id);
+		//}
+		//if(!strcmp(shareName, "x280")){
+			//cprintf("\n create share done name %s , env id %d",shareName,myenv->env_id);
+		//}
 
 		if(object==NULL){
+			//if(holding_spinlock(&(sh_spin))) release_spinlock(&sh_spin);
+			release_sleeplock(&shared_sleeplock);
+			//if(holding_spinlock(&(AllShares.shareslock))) release_spinlock(&(AllShares.shareslock));
+
 			return	E_NO_SHARE;
 		}
 
@@ -192,21 +232,29 @@ int createSharedObject(int32 ownerID, char* shareName, uint32 size, uint8 isWrit
 		uint32 allocate=size/PAGE_SIZE;
 
 		struct FrameInfo **frames=object->framesStorage;
-
+		int ret;
 		for(uint32 i=0;i<allocate;i++)
 		{
 
 			allocate_frame(&(frames[i]));
 
-			int ret = map_frame(myenv->env_page_directory, frames[i], start, PERM_WRITEABLE|PERM_USER);
+			ret = map_frame(myenv->env_page_directory, frames[i], start, PERM_WRITEABLE|PERM_USER);
 
 			start=start+PAGE_SIZE;
 		}
 
-
+		//if(!strcmp(shareName, "x153")){
+			//cprintf("\n alloc share done name %s , env id %d, calling %d",shareName,ownerID,myenv->env_id);
+		//}
+		//if(!strcmp(shareName, "x280")){
+			//cprintf("\n aloc share done name %s , env id %d",shareName,myenv->env_id);
+		//}
 		if(!holding_spinlock(&(AllShares.shareslock))) acquire_spinlock(&(AllShares.shareslock));
 		LIST_INSERT_TAIL(&(AllShares.shares_list),object);
 		if(holding_spinlock(&(AllShares.shareslock))) release_spinlock(&(AllShares.shareslock));
+
+		release_sleeplock(&shared_sleeplock);
+		//if(holding_spinlock(&(sh_spin))) release_spinlock(&sh_spin);
 
 		return object->ID;
 

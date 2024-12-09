@@ -35,6 +35,7 @@ struct Share
 	LIST_ENTRY(Share) prev_next_info;
 
 };
+struct sleeplock shared_sleeplock;
 
 //List of all shared objects
 LIST_HEAD(Share_List, Share);		// Declares 'struct Share_List'

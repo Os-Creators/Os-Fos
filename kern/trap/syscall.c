@@ -389,7 +389,9 @@ void sys_env_set_priority(int envID, int priority)
 /*******************************/
 int sys_createSharedObject(char* shareName, uint32 size, uint8 isWritable, void* virtual_address)
 {
-	return createSharedObject(cur_env->env_id, shareName, size, isWritable, virtual_address);
+	acquire_sleeplock(&shared_sleeplock);
+
+	return createSharedObject(get_cpu_proc()->env_id, shareName, size, isWritable, virtual_address);
 }
 
 int sys_getSizeOfSharedObject(int32 ownerID, char* shareName)
@@ -484,6 +486,7 @@ int sys_create_env(char* programName, unsigned int page_WS_size,unsigned int LRU
 	struct Env* env =  env_create(programName, page_WS_size, LRU_second_list_size, percent_WS_pages_to_remove);
 	if(env == NULL)
 	{
+		cprintf("\nenv not in new (kern/trap/syscall.c)");
 		return E_ENV_CREATION_ERROR;
 	}
 	//cprintf("\nENV %d is created\n", env->env_id);

@@ -12,6 +12,7 @@
 #include <kern/disk/pagefile_manager.h>
 #include <kern/mem/memory_manager.h>
 #include <kern/mem/kheap.h>
+struct sleeplock f_sleeplock;
 
 //2014 Test Free(): Set it to bypass the PAGE FAULT on an instruction with this length and continue executing the next one
 // 0 means don't bypass the PAGE FAULT
@@ -161,14 +162,17 @@ void fault_handler(struct Trapframe *tf)
 
 		   if(!(fault_va>=0 && fault_va<USER_LIMIT) && user_access!=PERM_USER) //User
 		   {
+			   cprintf("exit1");
 			  env_exit();
 		   }
 		   if(fault_va>= USER_HEAP_START && fault_va<USER_HEAP_MAX && marked_page!=perm_available) // unmarked
 		   {
+			   cprintf("exit2");
 			 env_exit();
 		   }
 		   if(present==PERM_PRESENT && read_access!=PERM_WRITEABLE) // read
 		   {
+			   cprintf("exit3");
 			 env_exit();
 		   }
 			/*============================================================================================*/
@@ -250,6 +254,7 @@ void page_fault_handler(struct Env * faulted_env, uint32 fault_va)
 	//panic("page_fault_handler().PLACEMENT is not implemented yet...!!");
     // Functions to check if my page is stack or heap
 	// allocate , map -> ws ele(kmalloc -> alloc,map)
+
 	 struct WorkingSetElement *new_element = env_page_ws_list_create_element(faulted_env , fault_va);
 	 LIST_INSERT_TAIL(&(faulted_env->page_WS_list), new_element);
 	 uint32 size = LIST_SIZE(&(faulted_env->page_WS_list));
@@ -274,7 +279,9 @@ void page_fault_handler(struct Env * faulted_env, uint32 fault_va)
 	  else
 	   {
 		  env_page_ws_invalidate(faulted_env,fault_va);
-	      env_exit();
+		  cprintf("\n\n\n exit%d",faulted_env->env_id);
+		  env_exit();
+
 	   }
 	 }
 	 else
