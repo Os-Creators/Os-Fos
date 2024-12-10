@@ -329,3 +329,11 @@ void sys_env_set_priority(int32 envID,int priority)
 	syscall(SYS_env_set_priority,(uint32)envID,(uint32)priority,0,0,0);
 
 }
+void sys_acquire_shared_sleep()
+{
+	//Comment the following line before start coding...
+	//panic("not implemented yet");
+
+	syscall(SYS_acquire_shared_sleep,0,0,0,0,0);
+
+}

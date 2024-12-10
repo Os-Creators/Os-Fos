@@ -389,9 +389,9 @@ void sys_env_set_priority(int envID, int priority)
 /*******************************/
 int sys_createSharedObject(char* shareName, uint32 size, uint8 isWritable, void* virtual_address)
 {
-	acquire_sleeplock(&shared_sleeplock);
-
-	return createSharedObject(get_cpu_proc()->env_id, shareName, size, isWritable, virtual_address);
+	//acquire_sleeplock(&shared_sleeplock);
+	//get_cpu_proc()->env_id
+	return createSharedObject(cur_env->env_id, shareName, size, isWritable, virtual_address);
 }
 
 int sys_getSizeOfSharedObject(int32 ownerID, char* shareName)
@@ -525,7 +525,11 @@ void sys_bypassPageFault(uint8 instrLength)
 {
 	bypassInstrLength = instrLength;
 }
-
+void sys_acquire_shared_sleep(){
+	//acquireSharedSleep();
+	if(!holding_sleeplock(&shared_sleeplock))
+		acquire_sleeplock(&shared_sleeplock);
+}
 
 /**************************************************************************/
 /************************* SYSTEM CALLS HANDLER ***************************/
@@ -720,6 +724,10 @@ uint32 syscall(uint32 syscallno, uint32 a1, uint32 a2, uint32 a3, uint32 a4, uin
 			break; //  is void return 0 & break/return 0|| break?
 	case SYS_env_set_priority:
 			sys_env_set_priority((int)a1,(int)a2);
+			return 0;
+			break;
+	case SYS_acquire_shared_sleep:
+			sys_acquire_shared_sleep();
 			return 0;
 			break;
 

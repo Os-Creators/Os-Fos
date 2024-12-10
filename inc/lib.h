@@ -118,6 +118,7 @@ uint32 busy_wait(uint32 loopMax);
 int	iscons(int fd);
 int	opencons(void);
 
+void sys_acquire_shared_sleep();
 
 /* panic.c */
 void CheckWSArrayWithoutLastIndex(uint32 *expectedPages, int arraySize);

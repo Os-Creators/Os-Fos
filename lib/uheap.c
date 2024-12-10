@@ -300,6 +300,7 @@ void* smalloc(char *sharedVarName, uint32 size, uint8 isWritable)
 
 			uint32* va = (uint32*)(((uint32)myEnv->hardlimit + PAGE_SIZE) + (i*PAGE_SIZE));
 			if(va != NULL){
+				sys_acquire_shared_sleep();
 				int ret = sys_createSharedObject(sharedVarName,size,isWritable,va);
 
 				if(ret < 0 )

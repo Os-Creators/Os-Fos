@@ -51,6 +51,7 @@ enum
 	SYS_free_user_mem,
 	SYS_allocate_user_mem,
 	SYS_env_set_priority,
+	SYS_acquire_shared_sleep,
 	/*2024*/
 	//TODO: [PROJECT'24.MS1 - #02] [2] SYSTEM CALLS - Add suitable code here
 
