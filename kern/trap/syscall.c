@@ -382,23 +382,21 @@ void sys_init_queue(struct Env_Queue* queue){
 
 	return init_queue(queue);
 }
-void sys_enqueue(struct Env_Queue* queue, struct Env* env){
-
-	return enqueue(queue, env);
+void sys_wait_ksemaphore(struct semaphore *sem){
+	struct ksemaphore *ksem = (struct ksemaphore*)sem->semdata;
+	return wait_ksemaphore(ksem);
 }
-struct Env* sys_dequeue(struct Env_Queue* queue){
-
-	return dequeue(queue);
+void sys_signal_ksemaphore(struct semaphore *sem){
+	struct ksemaphore *ksem = (struct ksemaphore*)sem->semdata;
+	return signal_ksemaphore(ksem);
 }
-void sys_sched_insert_ready0(struct Env* env){
 
-	return sched_insert_ready0(env);
-}
 /*******************************/
 /* SHARED MEMORY SYSTEM CALLS */
 /*******************************/
 int sys_createSharedObject(char* shareName, uint32 size, uint8 isWritable, void* virtual_address)
 {
+	acquire_sleeplock(&shared_sleeplock);
 	return createSharedObject(cur_env->env_id, shareName, size, isWritable, virtual_address);
 }
 
@@ -729,16 +727,12 @@ uint32 syscall(uint32 syscallno, uint32 a1, uint32 a2, uint32 a3, uint32 a4, uin
 		    sys_init_queue((struct Env_Queue*)a1);
 		    return 0;
 		    break;
-	case SYS_enqueue:
-		    sys_enqueue((struct Env_Queue*)a1,(struct Env*)a2);
+	case SYS_wait_ksemaphore:
+		    sys_wait_ksemaphore((struct semaphore*)a1);
 		    return 0;
 		    break;
-	case SYS_dequeue:
-		    sys_dequeue((struct Env_Queue*)a1);
-		    return 0;
-		    break;
-	case SYS_ins_ready:
-		    sys_sched_insert_ready0((struct Env*) a1);
+	case SYS_signal_ksemaphore:
+		    sys_signal_ksemaphore((struct semaphore *)a1);
 		    return 0;
 		    break;
 	case NSYSCALLS:

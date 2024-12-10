@@ -14,6 +14,7 @@
 #include "kheap.h"
 #include "memory_manager.h"
 
+
 //==================================================================================//
 //============================== GIVEN FUNCTIONS ===================================//
 //==================================================================================//
@@ -28,6 +29,7 @@ void sharing_init()
 #if USE_KHEAP
 	LIST_INIT(&AllShares.shares_list) ;
 	init_spinlock(&AllShares.shareslock, "shares lock");
+	init_sleeplock(&shared_sleeplock, "shared sleep lock");
 #else
 	panic("not handled when KERN HEAP is disabled");
 #endif
@@ -91,6 +93,7 @@ struct Share* create_share(int32 ownerID, char* shareName, uint32 size, uint8 is
 	//Your Code is Here...
 	//lamiaa_mahmoud 2022170597
 	struct Share* new_share = kmalloc(sizeof(struct Share));
+
 	if (new_share == NULL)
 	{
 		return NULL;
@@ -106,6 +109,7 @@ struct Share* create_share(int32 ownerID, char* shareName, uint32 size, uint8 is
 
 	uint32 numFrames = ROUNDUP((size + PAGE_SIZE - 1),PAGE_SIZE) / PAGE_SIZE;
 	new_share->framesStorage = create_frames_storage(numFrames);
+
 	if (new_share->framesStorage == NULL)
 	{
 	   kfree(new_share);
@@ -163,7 +167,6 @@ struct Share* get_share(int32 ownerID, char* name)
 
 
 }
-
 //=========================
 // [4] Create Share Object:
 //=========================
@@ -176,13 +179,16 @@ int createSharedObject(int32 ownerID, char* shareName, uint32 size, uint8 isWrit
 
 		struct Env* myenv = get_cpu_proc(); //The calling environment
 		if(get_share(ownerID,shareName)!=NULL){
+
+			release_sleeplock(&shared_sleeplock);
 			return	E_SHARED_MEM_EXISTS;
 		}
 
 		struct Share* object=create_share(ownerID,shareName,size,isWritable);
 
-
 		if(object==NULL){
+
+			release_sleeplock(&shared_sleeplock);
 			return	E_NO_SHARE;
 		}
 
@@ -192,21 +198,22 @@ int createSharedObject(int32 ownerID, char* shareName, uint32 size, uint8 isWrit
 		uint32 allocate=size/PAGE_SIZE;
 
 		struct FrameInfo **frames=object->framesStorage;
-
+		int ret;
 		for(uint32 i=0;i<allocate;i++)
 		{
 
 			allocate_frame(&(frames[i]));
 
-			int ret = map_frame(myenv->env_page_directory, frames[i], start, PERM_WRITEABLE|PERM_USER);
+			ret = map_frame(myenv->env_page_directory, frames[i], start, PERM_WRITEABLE|PERM_USER);
 
 			start=start+PAGE_SIZE;
 		}
 
-
 		if(!holding_spinlock(&(AllShares.shareslock))) acquire_spinlock(&(AllShares.shareslock));
 		LIST_INSERT_TAIL(&(AllShares.shares_list),object);
 		if(holding_spinlock(&(AllShares.shareslock))) release_spinlock(&(AllShares.shareslock));
+
+		release_sleeplock(&shared_sleeplock);
 
 		return object->ID;
 
@@ -283,7 +290,6 @@ void free_share(struct Share* ptrShare)
 
   kfree(ptrShare->framesStorage);
   kfree(ptrShare);
-  cprintf("free share\n");
 
 }
 
@@ -297,12 +303,7 @@ int freeSharedObject(int32 sharedObjectID, void *startVA)
   //panic("freeSharedObject is not implemented yet");
   //Your Code is Here...
 
-	//	Get the shared object from the "shares_list"
-	//	Unmap it from the current process
-	//	If page table(s) become empty, remove it
-
-	cprintf("HELLO IN FREE SHARED OBJECT\n");
-	  if(holding_spinlock(&(AllShares.shareslock))==0)acquire_spinlock(&(AllShares.shareslock));
+	  if(holding_spinlock(&(AllShares.shareslock))==0) acquire_spinlock(&(AllShares.shareslock));
 
 	  struct Share* sObject;
 
@@ -317,14 +318,15 @@ int freeSharedObject(int32 sharedObjectID, void *startVA)
 	  // corner case
 	  if(sObject == NULL || sObject->references == 0)
 	  {
-		  cprintf("NO OBJECTTT ;3 \n");
 		  if(holding_spinlock(&(AllShares.shareslock))==1)release_spinlock(&(AllShares.shareslock));
 		  return -1;
 	  }
 
+	  if(holding_spinlock(&(AllShares.shareslock))==1)release_spinlock(&(AllShares.shareslock));
 
-	  uint32 start = (uint32)startVA;
-	  uint32 allocate = sObject->size/PAGE_SIZE;
+
+	  uint32 start = ROUNDDOWN((uint32)startVA,PAGE_SIZE);
+	  uint32 allocate = ROUNDUP(sObject->size,PAGE_SIZE)/PAGE_SIZE;
 
 	  struct Env* myenv = get_cpu_proc();
 
@@ -333,18 +335,16 @@ int freeSharedObject(int32 sharedObjectID, void *startVA)
 
 	      uint32 *ptr_page_table;
 	      int ret = get_page_table(myenv->env_page_directory,start,&ptr_page_table);
-	      cprintf("RETURN GET PAGE TABLE %d\n",ret);
-	      if(myenv->env_page_directory[PDX((uint32*)start)] != 0)
-	      {
+
+	       if(myenv->env_page_directory[PDX((uint32*)start)] != 0)
+	       {
 	    	  bool empty = 1;
 
-			   for(uint32 j=PTX(start); j<1024; j++)
+			   for(uint32 j=0; j<1024; j++)
 			  {
-				 //cprintf("\nhere %d \n",j); // j =1
-				// cprintf(" %d \n",(uint32)ptr_page_table[j]);
-				if((ptr_page_table[j] & (PERM_PRESENT | PERM_USER | PERM_WRITEABLE)) ==(PERM_PRESENT | PERM_USER | PERM_WRITEABLE))
+				if((ptr_page_table[j] & (~PERM_AVAILABLE)) != 0)
 				{
-					//cprintf("\nemptyyyyyy?");
+
 				   empty = 0;
 				   break;
 				}
@@ -352,117 +352,31 @@ int freeSharedObject(int32 sharedObjectID, void *startVA)
 
 			  if(empty)
 			  {
-				// ptr_page_directory or my_env ?
-				//uint32 * ptr_page_table = kmalloc(PAGE_SIZE);  -> how page table created
-				 cprintf("asdasd \n");
-				 kfree(ptr_page_table);  //remove page table from memory
-				 cprintf("after kfree\n");
-				 pf_remove_env_page(myenv,(uint32)ptr_page_table); //remove page table from disk
-				 cprintf("after disk\n");
-				 //pd_clear_page_dir_entry(myenv->env_page_directory,(uint32) ptr_page_table); //remove page table entry from page directory
+				  cprintf("after disk1\n");
 
-				 uint32 page_directory_entry = myenv->env_page_directory[PDX(start)];
-				 page_directory_entry &= (~PERM_PRESENT);
-				 myenv->env_page_directory[PDX(start)] = 0 ;
+				  pf_remove_env_page(myenv,(uint32)ptr_page_table); //remove page table from disk
+				  kfree(ptr_page_table);
+				  pd_clear_page_dir_entry(myenv->env_page_directory,(uint32)start); //remove page table entry from page directory
 
-				 cprintf("all after\n");
+				  cprintf("after disk2\n");
 			 }
 	     }
 
 	      start = start + PAGE_SIZE;
 	    }
 
+	  if(holding_spinlock(&(AllShares.shareslock))==0) acquire_spinlock(&(AllShares.shareslock));
+
 	   sObject->references--;
 
 	   if(sObject->references == 0)
 		   free_share(sObject);
 
-
+	   tlbflush();
 
 	   if(holding_spinlock(&(AllShares.shareslock))==1)release_spinlock(&(AllShares.shareslock));
 
-	   tlbflush();
-
 	   return 0;
-
-////	Get the shared object from the "shares_list"
-////	Unmap it from the current process
-////	If page table(s) become empty, remove it
-//
-//  if(holding_spinlock(&(AllShares.shareslock))==0)acquire_spinlock(&(AllShares.shareslock));
-//
-//  struct Share* sObject;
-//
-//  LIST_FOREACH(sObject, &(AllShares.shares_list))
-//  {
-//    if (sObject->ID == sharedObjectID)
-//      {
-//          break;
-//      }
-//
-//  }
-//
-//  // corner case
-//  if(sObject == NULL || sObject->references == 0)
-//  {
-//	  cprintf("NO OBJECTTT ;3 \n");
-//	  if(holding_spinlock(&(AllShares.shareslock))==1)release_spinlock(&(AllShares.shareslock));
-//	  return -1;
-//  }
-//
-//
-//  uint32 start = (uint32)startVA;
-//  uint32 allocate = sObject->size/PAGE_SIZE;
-//
-//  struct Env* myenv = get_cpu_proc();
-//
-//  for(uint32 i=0; i < allocate; i++)
-//    {
-//
-//      uint32 *ptr_page_table;
-//      int ret = get_page_table(myenv->env_page_directory,start,&ptr_page_table);
-//
-//	  cprintf(" %d ",ret);
-//      cprintf("here 1\n");
-//
-//      if(myenv->env_page_directory[PDX((uint32*)start)] != 0)
-//      {
-//    	  bool empty = 1;
-//
-//		   for(uint32 j=PTX(start); j<1024; j++)
-//		  {
-//			// cprintf("here %d \n",j); // j =1
-//			// cprintf(" %d \n",(uint32)ptr_page_table[j]);
-//			if(ptr_page_table[j] !=(ptr_page_table[j] & PERM_AVAILABLE))
-//			{
-//			   empty = 0;
-//			   break;
-//			}
-//		  }
-//
-//		  if(empty)
-//		  {
-//			// ptr_page_directory or my_env ?
-//			//uint32 * ptr_page_table = kmalloc(PAGE_SIZE);  -> how page table created
-//			 cprintf("asdasd \n");
-//			 kfree(ptr_page_table);  //remove page table from memory
-//			 pf_remove_env_page(myenv,(uint32)ptr_page_table); //remove page table from disk
-//			 pd_clear_page_dir_entry(myenv->env_page_directory,(uint32) ptr_page_table); //remove page table entry from page directory
-//		 }
-//     }
-//
-//      start = start + PAGE_SIZE;
-//    }
-//
-//   sObject->references--;
-//
-//   if(sObject->references == 0) free_share(sObject);
-//
-//   if(holding_spinlock(&(AllShares.shareslock))==1)release_spinlock(&(AllShares.shareslock));
-//
-//   tlbflush();
-//
-//   return 0;
 }
 
 

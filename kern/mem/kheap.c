@@ -117,11 +117,11 @@ void* kmalloc(unsigned int size)
 	//Write your code here, remove the panic and write your code
 	//kpanic_into_prompt("kmalloc() is not implemented yet...!!");
 
-
+	acquireSleep(&k_sleeplock);
 	// Block Allocator
 	if(size <= DYN_ALLOC_MAX_BLOCK_SIZE)
 	{
-		acquireSleep(&k_sleeplock);
+
 		void* addr = alloc_block_FF(size);
 		releaseSleep(&k_sleeplock);
 
@@ -130,6 +130,7 @@ void* kmalloc(unsigned int size)
 	// Page Allocator
 	if(isKHeapPlacementStrategyFIRSTFIT() != 1)
 	{
+		releaseSleep(&k_sleeplock);
 		return NULL;
 	}
 	uint32 num_of_pages = ROUNDUP(size , PAGE_SIZE)/ PAGE_SIZE; //check calculation
@@ -137,10 +138,11 @@ void* kmalloc(unsigned int size)
 
 	if(num_of_pages > page_allocator_pages)
 	{
+		releaseSleep(&k_sleeplock);
 		return NULL;
 	}
 
-	acquireSleep(&k_sleeplock);
+
 
 	bool page_found = 0;
 	uint32 return_addr;
@@ -204,13 +206,14 @@ void* kmalloc(unsigned int size)
 		}
 	}
 
-	releaseSleep(&k_sleeplock);
+
 
 	if(!page_found)
 	{
+		releaseSleep(&k_sleeplock);
 		return NULL; // couldn't allocate
 	}
-
+	releaseSleep(&k_sleeplock);
 	return (uint32*)return_addr;
 }
 
@@ -361,6 +364,7 @@ unsigned int kheap_physical_address(unsigned int virtual_address)
 
 //	A call with virtual_address = null is equivalent to kmalloc().
 //	A call with new_size = zero is equivalent to kfree().
+
 void *krealloc(void *virtual_address, uint32 new_size)
 {
 	//[PROJECT'24.MS2 BONUS2] Kernel Heap Realloc
@@ -547,6 +551,8 @@ void *krealloc(void *virtual_address, uint32 new_size)
 
 	return NULL;
 }
+
+
 //=================================================================================//
 //============================== OUR HELPER FUNCTIONS =============================//
 //=================================================================================//
