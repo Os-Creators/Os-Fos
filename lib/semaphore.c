@@ -17,12 +17,11 @@ struct semaphore create_semaphore(char *semaphoreName, uint32 value)
 
 	sys_init_queue(&(semdata->queue));
 	semdata->count = value;
-	semdata->lock = 0;
-
 	strncpy(semdata->name, semaphoreName, sizeof(semdata->name) - 1);
 	semdata->name[sizeof(semdata->name) - 1] = '\0';
 
 	struct semaphore sem597;
+	semdata->lock = 0;
 	sem597.semdata = semdata;
 
 	return sem597;
@@ -56,27 +55,28 @@ void wait_semaphore(struct semaphore sem)
 	//COMMENT THE FOLLOWING LINE BEFORE START CODING
 	//panic("wait_semaphore is not implemented yet");
 	//Your Code is Here...
-	int keyw = 1;
-	do
+    if(sem.semdata == NULL)
+    {
+    	panic("Invalid semaphore");
+    }
+	while (1)
 	{
-		xchg((uint32*)&keyw,sem.semdata->lock);
-	} while (keyw != 0);
+		int key = xchg((uint32*)&sem.semdata->lock, 1);
+		if (key == 0)
+		{
+		    break;
+		 }
+	}
 
-	if (sem.semdata->count > 0)
+    // decrement the count
+	 sem.semdata->count--;
+	 // If process is not blocked
+	 sem.semdata->lock = 0;
+
+	    if (sem.semdata->count < 0)
 	    {
-		    // decrement the count
-	        sem.semdata->count--;
-	        // If process is not blocked
-	        sem.semdata->lock = 0;
-	    }
-	    else
-	    {
-	        uint32 envindex = sys_getenvindex();
-	        struct Env myenv = envs[envindex];
-            // add process P into s.queue
-	        sys_enqueue(&(sem.semdata->queue), &myenv);
-            // Block process
-	        myenv.env_status = ENV_BLOCKED;
+	    	// Block process P
+	    	sys_wait_ksemaphore(&sem);
 	        // Release the lock after blocking
 	        sem.semdata->lock = 0;
 	        return;
@@ -90,30 +90,29 @@ void signal_semaphore(struct semaphore sem)
 	//COMMENT THE FOLLOWING LINE BEFORE START CODING
 	//panic("signal_semaphore is not implemented yet");
 	//Your Code is Here...
-	int keys = 1;
-	do
+	if (sem.semdata == NULL)
 	{
-		xchg((uint32*)&keys,sem.semdata->lock);
-	} while (keys != 0);
+	    panic("Invalid semaphore");
+	}
+	while (1)
+	{
+	int key = xchg((uint32*)&sem.semdata->lock, 1);
+	if (key == 0)
+	{
+	    break;
+	 }
+	    }
 	sem.semdata->count++;
 	if (sem.semdata->count <= 0)
 	{
-		//remove a process P from s.queue
-		struct Env* env = sys_dequeue(&(sem.semdata->queue));
-		if(env != NULL)
-		{
-		//Unblock process P from blocked process and place process P on ready list//
-		    env->env_status = ENV_READY;
-		    sys_sched_insert_ready0(env);
+		// remove process P from queue and unblock and insert to ready
+			sys_signal_ksemaphore(&sem);
 		    sem.semdata->lock = 0;
 			return;
-		}
 	}
+
 		sem.semdata->lock = 0;
-
-
 }
-
 int semaphore_count(struct semaphore sem)
 {
 	return sem.semdata->count;

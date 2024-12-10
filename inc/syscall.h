@@ -51,9 +51,8 @@ enum
 	SYS_free_user_mem,
 	SYS_allocate_user_mem,
 	SYS_init_queue,
-	SYS_enqueue,
-	SYS_dequeue,
-	SYS_ins_ready,
+	SYS_wait_ksemaphore,
+	SYS_signal_ksemaphore,
 	/*2024*/
 	//TODO: [PROJECT'24.MS1 - #02] [2] SYSTEM CALLS - Add suitable code here
 

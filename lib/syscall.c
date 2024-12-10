@@ -325,15 +325,9 @@ void sys_init_queue(struct Env_Queue* queue){
 
 	syscall(SYS_init_queue,(uint32)queue,0,0,0,0);
 }
-void sys_enqueue(struct Env_Queue* queue, struct Env* env){
-
-	syscall(SYS_enqueue,(uint32)queue,(uint32)env,0,0,0);
+void sys_wait_ksemaphore(struct semaphore *sem){
+	syscall(SYS_wait_ksemaphore,(uint32)sem,0,0,0,0);
 }
-struct Env* sys_dequeue(struct Env_Queue* queue){
-
-	syscall(SYS_dequeue,(uint32)queue,0,0,0,0);
-	return 0;
-}
-void sys_sched_insert_ready0(struct Env* env){
-	syscall(SYS_ins_ready,(uint32)env,0,0,0,0);
+void sys_signal_ksemaphore(struct semaphore *sem){
+	syscall(SYS_signal_ksemaphore,(uint32)sem,0,0,0,0);
 }

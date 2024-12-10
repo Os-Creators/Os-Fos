@@ -756,4 +756,3 @@ void *delicious_Potato (uint32 potato)
 	salad = tomato + potato;
 	return (void*) salad;
 }
-

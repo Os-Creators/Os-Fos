@@ -21,6 +21,7 @@
 #include <inc/uheap.h>
 #include <inc/dynamic_allocator.h>
 
+
 #define USED(x)		(void)(x)
 #define RAND(s,e)	((sys_get_virtual_time().low % (e-s) + s))
 
@@ -85,9 +86,8 @@ int 	sys_pf_calculate_allocated_pages(void);
 
 //Semaphores
 void          sys_init_queue(struct Env_Queue* queue);
-void          sys_enqueue(struct Env_Queue* queue, struct Env* env);
-struct Env*   sys_dequeue(struct Env_Queue* queue);
-void          sys_sched_insert_ready0(struct Env* env);
+void          sys_wait_ksemaphore(struct semaphore *sem);
+void          sys_signal_ksemaphore(struct semaphore *sem);
 //Sharing
 //2017
 int 	sys_createSharedObject(char* shareName, uint32 size, uint8 isWritable, void* virtual_address);

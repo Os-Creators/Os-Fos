@@ -17,6 +17,7 @@ struct __semdata
 
 	// For debugging: Name of semaphore.
 	char name[64];
+
 };
 struct semaphore
 {
