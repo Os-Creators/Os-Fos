@@ -346,3 +346,4 @@ void sys_wait_ksemaphore(struct semaphore *sem){
 }
 void sys_signal_ksemaphore(struct semaphore *sem){
 	syscall(SYS_signal_ksemaphore,(uint32)sem,0,0,0,0);
+}
