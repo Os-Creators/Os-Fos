@@ -462,13 +462,94 @@ void env_start(void)
 void env_free(struct Env *e)
 {
 	/*REMOVE THIS LINE BEFORE START CODING*/
-	return;
+	//return;
 	/**************************************/
 
 	//[PROJECT'24.MS3] BONUS [EXIT ENV] env_free
 	// your code is here, remove the panic and write your code
-	panic("env_free() is not implemented yet...!!");
+	//panic("env_free() is not implemented yet...!!");
 
+	/***should i put locks in begin and the end?????**/
+	//should i remove all vm from my array
+	// [1] All pages in the page working set
+	// [2] Working set itself
+	cprintf("\n wk");
+	struct WorkingSetElement *wse;
+	LIST_FOREACH(wse, &(e->page_WS_list))
+	{
+		env_page_ws_invalidate(e, wse->virtual_address);
+	}
+	//kfree(&(e->page_WS_list));
+	// [3] ALL shared objects (if any)
+	// [4] ALL semaphores (if any)
+	cprintf("\n sem");
+
+	struct Share* object;
+	if(!holding_spinlock(&(AllShares.shareslock))) acquire_spinlock(&(AllShares.shareslock));
+	LIST_FOREACH(object,&AllShares.shares_list){
+
+		if(object->ownerID == e->env_id){
+//			uint32 size = ROUNDUP(object->size, PAGE_SIZE);
+//			uint32 allocate=size/PAGE_SIZE;
+//			for(int i = 0 ; i<allocate;i++){
+//				uint32 pa = to_physical_address(object->framesStorage[i]);
+//				uint32 va = kheap_virtual_address(pa);
+//				unmap_frame(e->env_page_directory,va);
+//			}
+
+			LIST_REMOVE(&(AllShares.shares_list),object);
+			kfree(object->framesStorage);
+			kfree(object);
+
+		}
+	}
+	if(holding_spinlock(&(AllShares.shareslock))) release_spinlock(&(AllShares.shareslock));
+	// [5] All page tables in the entire user virtual memory
+	uint32 page_dir_entry_no;//pdeno
+	cprintf("\n pg");
+
+	for (page_dir_entry_no = 0; page_dir_entry_no < PDX(USER_TOP) ; page_dir_entry_no++)
+	{
+		// only look at mapped page tables
+		if (!(e->env_page_directory[page_dir_entry_no] & PERM_PRESENT))
+			continue;
+		// find the pa and va of the page table
+		uint32 pa = EXTRACT_ADDRESS(e->env_page_directory[page_dir_entry_no]);
+		uint32 *ptr_page_table;
+		ptr_page_table = (uint32*) kheap_virtual_address(pa);
+		// unmap all PTEs in this page table
+		uint32 page_table_entry_no;//pteno
+		int empty =1;
+		for (page_table_entry_no = 0; page_table_entry_no < 1024; page_table_entry_no++)
+		{
+			if((ptr_page_table[page_table_entry_no] & (~PERM_AVAILABLE)) != 0)
+			{
+
+			   empty = 0;
+			   break;
+			}
+
+		}
+		if(empty)
+		{
+		  pf_remove_env_page(e,(uint32)ptr_page_table); //remove page table from disk
+		  kfree(ptr_page_table);
+		 e->env_page_directory[page_dir_entry_no] = 0 ;
+
+		  //tlbflush();//should i really do this??
+
+		}
+	}
+	// [6] Directory table
+	cprintf("\n dir");
+	kfree(e->env_page_directory);
+	cprintf("\n dir2");
+	e->env_page_directory = 0;
+
+	//e->disk_env_pgdir_PA = 0;
+	// [7] User kernel stack
+	delete_user_kern_stack(e);
+	cprintf("\n st2");
 
 	// [9] remove this program from the page file
 	/*(ALREADY DONE for you)*/
@@ -898,10 +979,15 @@ void delete_user_kern_stack(struct Env* e)
 #if USE_KHEAP
 	//[PROJECT'24.MS3] BONUS
 	// Write your code here, remove the panic and write your code
-	panic("delete_user_kern_stack() is not implemented yet...!!");
+	//panic("delete_user_kern_stack() is not implemented yet...!!");
 
 	//Delete the allocated space for the user kernel stack of this process "e"
+	kfree(e->kstack);
+
 	//remember to delete the bottom GUARD PAGE (i.e. not mapped)
+	//uint32 guard_page = (uint32)e->kstack;
+//	pt_set_page_permissions(e->env_page_directory, guard_page,PERM_PRESENT,0);
+	//kfree((uint32*)guard_page);
 #else
 	panic("KERNEL HEAP is OFF! user kernel stack can't be deleted");
 #endif
