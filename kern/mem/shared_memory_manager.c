@@ -15,6 +15,12 @@
 #include "memory_manager.h"
 
 
+inline void releaseSharedSleep()
+{
+	if(holding_sleeplock(&shared_sleeplock))
+		release_sleeplock(&shared_sleeplock);
+}
+
 //==================================================================================//
 //============================== GIVEN FUNCTIONS ===================================//
 //==================================================================================//
@@ -180,7 +186,7 @@ int createSharedObject(int32 ownerID, char* shareName, uint32 size, uint8 isWrit
 		struct Env* myenv = get_cpu_proc(); //The calling environment
 		if(get_share(ownerID,shareName)!=NULL){
 
-			release_sleeplock(&shared_sleeplock);
+			releaseSharedSleep();
 			return	E_SHARED_MEM_EXISTS;
 		}
 
@@ -188,7 +194,7 @@ int createSharedObject(int32 ownerID, char* shareName, uint32 size, uint8 isWrit
 
 		if(object==NULL){
 
-			release_sleeplock(&shared_sleeplock);
+			releaseSharedSleep();
 			return	E_NO_SHARE;
 		}
 
@@ -213,7 +219,7 @@ int createSharedObject(int32 ownerID, char* shareName, uint32 size, uint8 isWrit
 		LIST_INSERT_TAIL(&(AllShares.shares_list),object);
 		if(holding_spinlock(&(AllShares.shareslock))) release_spinlock(&(AllShares.shareslock));
 
-		release_sleeplock(&shared_sleeplock);
+		releaseSharedSleep();
 
 		return object->ID;
 

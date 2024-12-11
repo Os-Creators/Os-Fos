@@ -301,6 +301,7 @@ void* smalloc(char *sharedVarName, uint32 size, uint8 isWritable)
 
 			uint32* va = (uint32*)(((uint32)myEnv->hardlimit + PAGE_SIZE) + (i*PAGE_SIZE));
 			if(va != NULL){
+				sys_acquire_shared_sleep();
 				int ret = sys_createSharedObject(sharedVarName,size,isWritable,va);
 
 				if(ret < 0 )
@@ -499,15 +500,13 @@ void sfree(void* virtual_address)
 
 	int ID = user_pages_arr[pageIndex].ID_shared;
 	user_pages_arr[pageIndex].ID_shared = -1;
-	cprintf("BEFORE free %x\n",va);
+
 	free((void*)va);
 	cprintf("ID in sfree %d\n",ID);
 	//cprintf("index in sfree %d\n",pageIndex);
-
 	//va &= 0x7FFFFFFF;
 
 	sys_freeSharedObject(ID,(void*)va);
-
 
 }
 

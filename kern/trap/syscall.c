@@ -349,12 +349,12 @@ void sys_allocate_chunk(uint32 virtual_address, uint32 size, uint32 perms)
 	//return;
 
 	if(virtual_address>USER_HEAP_MAX||virtual_address<USER_HEAP_START||virtual_address==0){
-					env_exit();
-				}
-			else{
-				allocate_chunk(cur_env->env_page_directory, virtual_address, size, perms);
-					return;
-			}
+		env_exit();
+	}
+	else{
+		allocate_chunk(cur_env->env_page_directory, virtual_address, size, perms);
+			return;
+	}
 }
 
 //2014
@@ -373,7 +373,11 @@ void sys_set_uheap_strategy(uint32 heapStrategy)
 {
 	_UHeapPlacementStrategy = heapStrategy;
 }
-
+void sys_env_set_priority(int envID, int priority)
+{
+	env_set_priority(envID, priority);
+	return;
+}
 /*******************************/
 /* SEMAPHORES SYSTEM CALLS */
 /*******************************/
@@ -396,7 +400,9 @@ void sys_signal_ksemaphore(struct semaphore *sem){
 /*******************************/
 int sys_createSharedObject(char* shareName, uint32 size, uint8 isWritable, void* virtual_address)
 {
-	acquire_sleeplock(&shared_sleeplock);
+
+	//acquire_sleeplock(&shared_sleeplock);
+	//get_cpu_proc()->env_id
 	return createSharedObject(cur_env->env_id, shareName, size, isWritable, virtual_address);
 }
 
@@ -492,6 +498,7 @@ int sys_create_env(char* programName, unsigned int page_WS_size,unsigned int LRU
 	struct Env* env =  env_create(programName, page_WS_size, LRU_second_list_size, percent_WS_pages_to_remove);
 	if(env == NULL)
 	{
+		cprintf("\nenv not in new (kern/trap/syscall.c)");
 		return E_ENV_CREATION_ERROR;
 	}
 	//cprintf("\nENV %d is created\n", env->env_id);
@@ -530,7 +537,11 @@ void sys_bypassPageFault(uint8 instrLength)
 {
 	bypassInstrLength = instrLength;
 }
-
+void sys_acquire_shared_sleep(){
+	//acquireSharedSleep();
+	if(!holding_sleeplock(&shared_sleeplock))
+		acquire_sleeplock(&shared_sleeplock);
+}
 
 /**************************************************************************/
 /************************* SYSTEM CALLS HANDLER ***************************/
@@ -723,7 +734,15 @@ uint32 syscall(uint32 syscallno, uint32 a1, uint32 a2, uint32 a3, uint32 a4, uin
 			sys_allocate_user_mem((uint32) a1, (uint32) a2);
 			return 0;
 			break; //  is void return 0 & break/return 0|| break?
-	case SYS_init_queue:
+	case SYS_env_set_priority:
+			sys_env_set_priority((int)a1,(int)a2);
+			return 0;
+			break;
+	case SYS_acquire_shared_sleep:
+			sys_acquire_shared_sleep();
+			return 0;
+			break;
+   	case SYS_init_queue:
 		    sys_init_queue((struct Env_Queue*)a1);
 		    return 0;
 		    break;
@@ -735,6 +754,7 @@ uint32 syscall(uint32 syscallno, uint32 a1, uint32 a2, uint32 a3, uint32 a4, uin
 		    sys_signal_ksemaphore((struct semaphore *)a1);
 		    return 0;
 		    break;
+
 	case NSYSCALLS:
 		    return 	-E_INVAL;
 		    break;

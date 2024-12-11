@@ -37,6 +37,17 @@ struct Share
 };
 struct sleeplock shared_sleeplock;
 
+/*inline void acquireSharedSleep()
+{
+	if(!holding_sleeplock(&shared_sleeplock))
+		acquire_sleeplock(&shared_sleeplock);
+}
+
+inline void releaseSharedSleep()
+{
+	if(holding_sleeplock(&shared_sleeplock))
+		release_sleeplock(&shared_sleeplock);
+}*/
 //List of all shared objects
 LIST_HEAD(Share_List, Share);		// Declares 'struct Share_List'
 

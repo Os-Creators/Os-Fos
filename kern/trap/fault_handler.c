@@ -297,57 +297,29 @@ void page_fault_handler(struct Env * faulted_env, uint32 fault_va)
 
 		// 0 --> Normal mode (clean)
 		// 1 --> Modified mode (dirty)
-		bool mode = (page_WS_max_sweeps > 0)? 0 : 1;
+    
+		bool mode = (page_WS_max_sweeps >= 0)? 0 : 1;
 
-		//cprintf("before, N = %d \n",page_WS_max_sweeps);
-		//env_page_ws_print(faulted_env);
-		//cprintf("\n");
+			cprintf("begin N = %d \n",page_WS_max_sweeps);
+			env_page_ws_print(faulted_env);
+			cprintf("\n");
 
+			// find the victim and the needed sweeps
+			uint32 victim_sweeps;
+			struct WorkingSetElement* victim = findVictim(mode,faulted_env,&victim_sweeps);
 
-		while(1==1)
-		{
-			int permissions = pt_get_page_permissions(faulted_env->env_page_directory,faulted_env->page_last_WS_element->virtual_address);
-			//cprintf("Outside CONDITION \n");
-			if(checkVictimPage(mode,faulted_env,permissions))
-			{
-				//cprintf("INSIDE CONDITION 1 \n");
-				replace(faulted_env, permissions, fault_va);
-				break;
-			}
-			else
-			{
-				//cprintf("INSIDE CONDITION 2 \n");
-				if((permissions & PERM_USED) == PERM_USED) // used bit = 1
-				{
-					//cprintf("INSIDE CONDITION 3 \n");
-					pt_set_page_permissions(faulted_env->env_page_directory, faulted_env->page_last_WS_element->virtual_address, 0, PERM_USED);
-					faulted_env->page_last_WS_element->sweeps_counter = 0;
+			// update data
+			update_WS_data(mode,faulted_env,victim,&victim_sweeps);
+			faulted_env->page_last_WS_element = victim;
 
-				}
-				else // used bit = 0
-				{
-					//cprintf("INSIDE CONDITION 4 \n");
-					faulted_env->page_last_WS_element->sweeps_counter++;
-					if(checkVictimPage(mode,faulted_env,permissions))
-					{
-						//cprintf("INSIDE CONDITION 5 \n");
-						replace(faulted_env, permissions, fault_va);
-						//cprintf("INSIDE CONDITION 6 \n");
-						break;
-					}
-				}
-			}
+			// replace the ele
+			int permissions = pt_get_page_permissions(faulted_env->env_page_directory,victim->virtual_address);
+			replace(faulted_env, permissions, fault_va); // it updates the pointer
 
-			update_pointer(faulted_env);
+			cprintf("after N \n");
+			env_page_ws_print(faulted_env);
+			cprintf(" sweeps = %u \n",victim_sweeps);
 
-			//cprintf("durning \n");
-			//env_page_ws_print(faulted_env);
-			//cprintf("\n");
-		}
-
-		//cprintf("after \n");
-		//env_page_ws_print(faulted_env);
-		cprintf("\n");
 	}
 }
 
@@ -382,31 +354,94 @@ int is_heap_address(uint32 address)
   }
 
 /////////////////////////////////////////////////////// Helper functions
+bool NthChance(bool mode,struct Env * faulted_env, uint32 fault_va)
+{
+//			cprintf("before Nth, N = %d \n",page_WS_max_sweeps);
+//			env_page_ws_print(faulted_env);
+//			cprintf("\n");
 
-void update_pointer(struct Env* faulted_env)
+	while(1==1)
+	{
+		struct WorkingSetElement* current_ws = faulted_env->page_last_WS_element;
+		int permissions = pt_get_page_permissions(faulted_env->env_page_directory,current_ws->virtual_address);
+		//cprintf("Outside CONDITION \n");
+		if(checkVictimPage(mode,faulted_env,permissions))
+		{
+			//cprintf("INSIDE CONDITION 1 \n");
+			replace(faulted_env, permissions, fault_va);
+			return 1;
+		}
+		else
+		{
+			//cprintf("INSIDE CONDITION 2 \n");
+
+			if((permissions & PERM_USED) == PERM_USED) // used bit = 1
+			{
+				//cprintf("INSIDE CONDITION 3 \n");
+				pt_set_page_permissions(faulted_env->env_page_directory, current_ws->virtual_address, 0, PERM_USED);
+				permissions &=~(PERM_USED);
+				current_ws->sweeps_counter = 0;
+
+			}
+			else // used bit = 0
+			{
+				//cprintf("INSIDE CONDITION 4 \n");
+				faulted_env->page_last_WS_element->sweeps_counter++;
+			}
+
+			if(checkVictimPage(mode,faulted_env,permissions))
+			{
+				//cprintf("INSIDE CONDITION 5 \n");
+				replace(faulted_env, permissions, fault_va);
+				//cprintf("INSIDE CONDITION 6 \n");
+				return 1;
+			}
+		}
+
+		update_pointer(faulted_env,&(faulted_env->page_last_WS_element));
+
+		if(LIST_FIRST(&(faulted_env->page_WS_list)) == faulted_env->page_last_WS_element)
+		{
+			return 0;
+		}
+
+		//cprintf("durning \n");
+		//env_page_ws_print(faulted_env);
+		//cprintf("\n");
+	}
+
+//	cprintf("After Nth, N = %d \n",page_WS_max_sweeps);
+//	env_page_ws_print(faulted_env);
+//	cprintf("\n");
+}
+void update_pointer(struct Env* faulted_env,struct WorkingSetElement** pointer)
 {
 	 struct WorkingSetElement* last_element = LIST_LAST(&(faulted_env->page_WS_list));
 
-	// cprintf("last ele = %p , page_last_WS_ele = %p",last_element,faulted_env->page_last_WS_element);
+//	 cprintf("b last ele = %p , pointer = %p \n",last_element,pointer);
+//	 cprintf("b last ele = %p , WS_last = %p \n",last_element,faulted_env->page_last_WS_element);
 
-	 if (last_element == faulted_env->page_last_WS_element)
+	 if (last_element == *pointer)
 	 {
-	 	 faulted_env->page_last_WS_element = LIST_FIRST(&(faulted_env->page_WS_list));
+		 *pointer = (LIST_FIRST(&(faulted_env->page_WS_list)));
 	 }
 	 else
 	 {
-	 	 faulted_env->page_last_WS_element = LIST_NEXT(faulted_env->page_last_WS_element);
+		 *pointer = LIST_NEXT(*pointer);
 	 }
-}
 
+//	 cprintf("a last ele = %p , pointer = %p \n",last_element,pointer);
+//	 cprintf("a last ele = %p , WS_last = %p \n",last_element,faulted_env->page_last_WS_element);
+
+}
 bool checkVictimPage(bool mode,struct Env* faulted_env, int perms)
 {
 
 	if((perms & PERM_USED) == PERM_USED)
 	{
-		faulted_env->page_last_WS_element->sweeps_counter = 0;
 		return 0;
 	}
+
 	uint32 sweeps = faulted_env->page_last_WS_element->sweeps_counter;
 
 	if(mode == 1) // Modified mode
@@ -439,10 +474,9 @@ bool checkVictimPage(bool mode,struct Env* faulted_env, int perms)
 void replace(struct Env* faulted_env, int perms, uint32 fault_va)
 {
 	struct WorkingSetElement* victim = faulted_env->page_last_WS_element;
-	uint32 * ptr_page_table;
-	struct FrameInfo* victim_page_frame_info= get_frame_info(faulted_env->env_page_directory, victim->virtual_address, &ptr_page_table);
 
-	remove_victim(faulted_env, perms, victim, victim_page_frame_info);
+	remove_victim(faulted_env, perms, victim);
+
 
 	//cprintf("INSIDE CONDITION 7 \n");
 
@@ -460,32 +494,44 @@ void replace(struct Env* faulted_env, int perms, uint32 fault_va)
 
 	int ret = pf_read_env_page(faulted_env,(void*)fault_va);
 
+	 if(ret == E_PAGE_NOT_EXIST_IN_PF)
+	 {
+		  if (is_stack_address(fault_va) != 1 && is_heap_address(fault_va) != 1)
+		  {
+			  env_exit();
+		  }
+	 }
+
 	if(ret == E_PAGE_NOT_EXIST_IN_PF)
 	{
-	  cprintf("didnot read from disk \n");
+	  cprintf("didnot read from disk1 \n");
 	}
 	else
 	{
-		cprintf("read from disk \n");
+		cprintf("read from disk1 \n");
 	}
 
-	//cprintf("read from disk \n");
 
-	//cprintf("INSIDE CONDITION ret = %d \n",ret);
-
-	update_pointer(faulted_env);
+	 update_pointer(faulted_env, &(faulted_env->page_last_WS_element));
 
 }
-void remove_victim(struct Env* faulted_env, int perms ,struct WorkingSetElement* victim, struct FrameInfo* modified_page_frame_info )
+void remove_victim(struct Env* faulted_env, int perms ,struct WorkingSetElement* victim)
 {
-	//cprintf("buff = %d",isBufferingEnabled());
 
-	if((perms & PERM_MODIFIED) == PERM_MODIFIED) //|| is_stack_address(victim->virtual_address) == 1 || is_heap_address(victim->virtual_address) == 1)
+	uint32 * ptr_page_table;
+	struct FrameInfo* modified_page_frame_info= get_frame_info(faulted_env->env_page_directory, victim->virtual_address, &ptr_page_table);
+    //Write on disk
+	if((perms & PERM_MODIFIED) == PERM_MODIFIED || is_stack_address(victim->virtual_address) == 1 || is_heap_address(victim->virtual_address) == 1)
 	{
-		int ret = pf_update_env_page(faulted_env, victim->virtual_address, modified_page_frame_info);
+		 int ret = pf_update_env_page(faulted_env, victim->virtual_address, modified_page_frame_info);
 		 pt_set_page_permissions(faulted_env->env_page_directory, victim->virtual_address, 0, PERM_MODIFIED);
-		 if(ret == 0) cprintf("wrote on disk \n");
-		 else  cprintf("didnot write on disk \n");
+//		 if(ret == 0) cprintf("wrote on disk \n");
+//		 else  cprintf("didnot write on disk \n");
+
+		if(is_stack_address(victim->virtual_address) == 1 || is_heap_address(victim->virtual_address) == 1)
+		{
+			cprintf("STACK OR HEAP PAGE \n");
+		}
 	}
 
 	unmap_frame(faulted_env->env_page_directory, victim->virtual_address);
@@ -495,4 +541,108 @@ int abs(int x)
 {
     return x >= 0 ? x : (-1*x);
 }
+/////////////////////////////////////////////////////// Bonus Nth chance helper functions
+
+struct WorkingSetElement* findVictim(bool mode,struct Env * faulted_env,uint32* sweeps)
+{
+	struct WorkingSetElement* victim;
+	uint32 min_sweeps = abs(page_WS_max_sweeps) + 6;
+
+	struct WorkingSetElement* tmp_ws_ele = faulted_env->page_last_WS_element;
+	//LIST_FOREACH(ws_ele,&(faulted_env->page_WS_list))
+	// one sweep to find the victim page
+	while(1 == 1)
+	{
+		uint32 s = countNeededSweeps(mode,faulted_env,tmp_ws_ele);
+
+		//cprintf(" s = %u \n",s);
+
+		if( s < min_sweeps)
+		{
+			victim = tmp_ws_ele;
+		    min_sweeps = s;
+		}
+
+//		cprintf("bvitim  , pointer = %p \n",tmp_ws_ele);
+//		cprintf("bvivtim , WS_last = %p \n",faulted_env->page_last_WS_element);
+
+		update_pointer(faulted_env,&tmp_ws_ele);
+
+//		cprintf("avitim  , pointer = %p \n",tmp_ws_ele);
+//	    cprintf("avivtim , WS_last = %p \n",faulted_env->page_last_WS_element);
+
+
+		if(tmp_ws_ele == faulted_env->page_last_WS_element)
+			break;
+	}
+
+	*sweeps = min_sweeps;
+	return victim;
+}
+uint32 countNeededSweeps(bool mode,struct Env * faulted_env,struct WorkingSetElement* ws_ele)
+{
+	int perms = pt_get_page_permissions(faulted_env->env_page_directory,ws_ele->virtual_address);
+
+	// if used bit is 1, then it will take one more sweep
+	// why in the MAX we compare with 1 not 0?
+	// if the needed sweeps is 1, then it will loop then +1 sweeps then become victim
+	// if the needed sweeps is 0, then it will STILL NEED TO LOOP then become victim without having to add
+	if(mode == 1) // Modified mode
+	{
+		if((perms & PERM_USED) == PERM_USED)
+		{
+			if((perms & PERM_MODIFIED) == PERM_MODIFIED) return abs(page_WS_max_sweeps) + 2;
+			else return abs(page_WS_max_sweeps) + 1;
+		}
+		else
+		{
+			if((perms & PERM_MODIFIED) == PERM_MODIFIED) return MAX(abs(page_WS_max_sweeps) + 1 - ws_ele->sweeps_counter,0);
+			else return MAX(abs(page_WS_max_sweeps) - ws_ele->sweeps_counter,1);
+		}
+	}
+	else // Normal mode
+	{
+		if((perms & PERM_USED) == PERM_USED)
+		{
+			return abs(page_WS_max_sweeps) + 1;
+		}
+		else
+		{
+			return MAX(abs(page_WS_max_sweeps) - ws_ele->sweeps_counter,1);
+		}
+	}
+}
+void update_WS_data(bool mode,struct Env * faulted_env,struct WorkingSetElement* victim,uint32* sweeps)
+{
+	    //cprintf("sweeps in update before %u",*sweeps);
+
+		struct WorkingSetElement* tmp_ws_ele = faulted_env->page_last_WS_element;
+		//LIST_FOREACH(ws_ele,&(faulted_env->page_WS_list))
+		// the elements before the victim pointer will take a (victim sweeps),
+		// the elements below the victim pointer will take (victim sweeps-1)
+		while(1 == 1)
+		{
+			if(tmp_ws_ele == victim) (*sweeps)--;
+			if(*sweeps <= 0) break;  // no updates so break
+
+			//cprintf("sweeps in update after %u",*sweeps);
+			int perms = pt_get_page_permissions(faulted_env->env_page_directory,tmp_ws_ele->virtual_address);
+
+			uint32 swe = *sweeps;
+			if((perms & PERM_USED) == PERM_USED)
+			{
+				swe--;
+				pt_set_page_permissions(faulted_env->env_page_directory, tmp_ws_ele->virtual_address, 0, PERM_USED);
+				tmp_ws_ele->sweeps_counter = 0;
+			}
+
+			tmp_ws_ele->sweeps_counter += swe;
+
+			update_pointer(faulted_env,&tmp_ws_ele);
+
+			if(tmp_ws_ele == faulted_env->page_last_WS_element)
+				break;
+		}
+}
+
 

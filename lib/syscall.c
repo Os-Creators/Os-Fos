@@ -321,6 +321,22 @@ void sys_allocate_user_mem(uint32 virtual_address, uint32 size)
 	syscall(SYS_allocate_user_mem,(uint32)virtual_address,(uint32)size,0,0,0);
 
 }
+void sys_env_set_priority(int32 envID,int priority)
+{
+	//Comment the following line before start coding...
+	//panic("not implemented yet");
+
+	syscall(SYS_env_set_priority,(uint32)envID,(uint32)priority,0,0,0);
+
+}
+void sys_acquire_shared_sleep()
+{
+	//Comment the following line before start coding...
+	//panic("not implemented yet");
+
+	syscall(SYS_acquire_shared_sleep,0,0,0,0,0);
+
+}
 void sys_init_queue(struct Env_Queue* queue){
 
 	syscall(SYS_init_queue,(uint32)queue,0,0,0,0);
@@ -330,4 +346,3 @@ void sys_wait_ksemaphore(struct semaphore *sem){
 }
 void sys_signal_ksemaphore(struct semaphore *sem){
 	syscall(SYS_signal_ksemaphore,(uint32)sem,0,0,0,0);
-}

@@ -182,6 +182,8 @@ struct Env {
 	uint32 nPageIn, nPageOut, nNewPageAdded;
 	uint32 nClocks ;
 
+	int env_ticks;
+
 };
 
 #define PRIORITY_LOW    		1

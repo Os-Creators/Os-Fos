@@ -70,11 +70,21 @@ void __page_fault_handler_with_buffering(struct Env * curenv, uint32 fault_va);
 void dyn_alloc_local_scope_method(struct Env * curenv, uint32 fault_va);
 void page_fault_handler(struct Env * curenv, uint32 fault_va);
 void table_fault_handler(struct Env * curenv, uint32 fault_va);
+
 int is_heap_address(uint32 address);
 int is_stack_address(uint32 address);
+
+bool NthChance(bool mode,struct Env * faulted_env, uint32 fault_va);
 bool checkVictimPage(bool mode,struct Env* faulted_env, int perms);
-void update_pointer(struct Env* faulted_env);
+void update_pointer(struct Env* faulted_env,struct WorkingSetElement** pointer);
 void replace(struct Env* faulted_env, int perms , uint32 fault_va);
-void remove_victim(struct Env* faulted_env, int perms ,struct WorkingSetElement* victim, struct FrameInfo* modified_page_frame_info);
+void remove_victim(struct Env* faulted_env, int perms ,struct WorkingSetElement* victim);
 int abs(int x);
+
+struct WorkingSetElement* findVictim(bool mode,struct Env * faulted_env,uint32* sweeps);
+uint32 countNeededSweeps(bool mode,struct Env * faulted_env,struct WorkingSetElement* ws_ele);
+void update_WS_data(bool mode,struct Env * faulted_env,struct WorkingSetElement* victim,uint32* sweeps);
+
 #endif /* KERN_FAULT_HANDLER_H_ */
+
+

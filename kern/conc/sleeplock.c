@@ -23,8 +23,9 @@ void init_sleeplock(struct sleeplock *lk, char *name)
 int holding_sleeplock(struct sleeplock *lk)
 {
 	int r;
+	int cur_env = (get_cpu_proc() == NULL)? -1: get_cpu_proc()->env_id;
 	acquire_spinlock(&(lk->lk));
-	r = lk->locked && (lk->pid == get_cpu_proc()->env_id);
+	r = lk->locked && (lk->pid == cur_env);
 	release_spinlock(&(lk->lk));
 	return r;
 }
@@ -44,8 +45,10 @@ void acquire_sleeplock(struct sleeplock *lk)
 		  sleep(&(lk->chan),&(lk->lk));  // go to sleep //2022170473
 		}
 
+
+		int cur_env = (get_cpu_proc() == NULL)? -1: get_cpu_proc()->env_id;
 		lk->locked = 1;//2022170473
-		//lk->pid = get_cpu_proc()->env_id;   //related to above comment
+		lk->pid = cur_env;   //related to above comment
 
 	if(holding_spinlock(&(lk->lk))==1) release_spinlock(&(lk->lk));//2022170473
 
@@ -59,13 +62,18 @@ void release_sleeplock(struct sleeplock *lk)
 	  //Your Code is Here...
 	if(holding_spinlock(&(lk->lk))==0) acquire_spinlock(&(lk->lk));//2022170432
 
-	    //  if(lk->pid==get_cpu_proc()->env_id)//2022170432
-	    //  {
-	    	
-	    	 	   wakeup_all(&(lk->chan));//2022170432
-	    	 	   lk->locked=0; //free //2022170432
-	         	   lk->pid=0;//2022170432
-	     // }
+	int cur_env = (get_cpu_proc() == NULL)? -1: get_cpu_proc()->env_id;
+
+	      if(lk->pid == cur_env)//2022170432
+	      {
+	    	  wakeup_all(&(lk->chan));//2022170432
+	    	  lk->locked=0; //free //2022170432
+	    	  lk->pid=0;//2022170432
+	      }
+	      else
+	      {
+	    	  panic("you are not the pid that was holding me");
+	      }
 	      
 	if(holding_spinlock(&(lk->lk))==1) release_spinlock(&(lk->lk)); //2022170432
 }

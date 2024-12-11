@@ -283,6 +283,9 @@ void sched_run_env(uint32 envId)
 		if(ptr_env->env_id == envId)
 		{
 			sched_remove_new(ptr_env);
+			if(ptr_env == NULL)
+				cprintf("0");
+			ptr_env->env_ticks = ticks;//shimaa
 			sched_insert_ready(ptr_env);
 
 			/*2015*///if scheduler not run yet, then invoke it!
@@ -540,6 +543,8 @@ void sched_run_all()
 	for (int i = 0; i < q_size; ++i)
 	{
 		ptr_env = dequeue(&ProcessQueues.env_new_queue);
+		ptr_env->env_ticks = ticks;
+		//cprintf("\nin run all ,env ticks %d , ticks%d",ptr_env->env_ticks,ticks);
 		sched_insert_ready(ptr_env);
 	}
 
@@ -702,14 +707,42 @@ int get_load_average()
 void env_set_priority(int envID, int priority)
 {
 	//TODO: [PROJECT'24.MS3 - #06] [3] PRIORITY RR Scheduler - env_set_priority
-
 	//Get the process of the given ID
-	struct Env* proc ;
-	envid2env(envID, &proc, 0);
+	int ret;//shimaa
 
+	struct Env* proc ;
+	ret = envid2env(envID, &proc, 0);
+
+	if(ret == E_BAD_ENV)
+		panic("Env id not found ");
 	//Your code is here
 	//Comment the following line
-	panic("Not implemented yet");
+	//panic("Not implemented yet");
+
+	if(priority >= num_of_ready_queues)
+		panic("requested priority is more than the max priority, the max is %d ",num_of_ready_queues);
+
+	if(priority < 0)
+		panic("requested priority must be positive");
+
+	if(proc->priority == priority){
+		return;
+	}
+
+	//C.S.
+	if(holding_spinlock(&ProcessQueues.qlock)==0) acquire_spinlock(&ProcessQueues.qlock);
+
+	if( proc -> env_status == ENV_READY){
+		sched_remove_ready(proc);
+		proc->priority = priority;
+		proc->env_ticks = timer_ticks();
+		sched_insert_ready(proc);
+	}else{
+		proc->priority = priority;
+	}
+
+    if(holding_spinlock(&ProcessQueues.qlock)==1) release_spinlock(&ProcessQueues.qlock);
+
 }
 
 void sched_set_starv_thresh(uint32 starvThresh)
@@ -717,5 +750,6 @@ void sched_set_starv_thresh(uint32 starvThresh)
 	//TODO: [PROJECT'24.MS3 - #06] [3] PRIORITY RR Scheduler - sched_set_starv_thresh
 	//Your code is here
 	//Comment the following line
-	panic("Not implemented yet");
+	//panic("Not implemented yet");
+	StarvThresh = starvThresh;
 }
