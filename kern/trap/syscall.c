@@ -382,13 +382,25 @@ void sys_env_set_priority(int envID, int priority)
 /* SEMAPHORES SYSTEM CALLS */
 /*******************************/
 //[PROJECT'24.MS3] ADD SUITABLE CODE HERE
+void sys_init_queue(struct Env_Queue* queue){
 
+	return init_queue(queue);
+}
+void sys_wait_ksemaphore(struct semaphore *sem){
+	struct ksemaphore *ksem = (struct ksemaphore*)sem->semdata;
+	return wait_ksemaphore(ksem);
+}
+void sys_signal_ksemaphore(struct semaphore *sem){
+	struct ksemaphore *ksem = (struct ksemaphore*)sem->semdata;
+	return signal_ksemaphore(ksem);
+}
 
 /*******************************/
 /* SHARED MEMORY SYSTEM CALLS */
 /*******************************/
 int sys_createSharedObject(char* shareName, uint32 size, uint8 isWritable, void* virtual_address)
 {
+
 	//acquire_sleeplock(&shared_sleeplock);
 	//get_cpu_proc()->env_id
 	return createSharedObject(cur_env->env_id, shareName, size, isWritable, virtual_address);
@@ -730,10 +742,22 @@ uint32 syscall(uint32 syscallno, uint32 a1, uint32 a2, uint32 a3, uint32 a4, uin
 			sys_acquire_shared_sleep();
 			return 0;
 			break;
+   	case SYS_init_queue:
+		    sys_init_queue((struct Env_Queue*)a1);
+		    return 0;
+		    break;
+	case SYS_wait_ksemaphore:
+		    sys_wait_ksemaphore((struct semaphore*)a1);
+		    return 0;
+		    break;
+	case SYS_signal_ksemaphore:
+		    sys_signal_ksemaphore((struct semaphore *)a1);
+		    return 0;
+		    break;
 
 	case NSYSCALLS:
-		return 	-E_INVAL;
-		break;
+		    return 	-E_INVAL;
+		    break;
 	}
 	//panic("syscall not implemented");
 	return -E_INVAL;

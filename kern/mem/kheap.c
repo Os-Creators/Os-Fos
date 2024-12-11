@@ -116,7 +116,6 @@ void* kmalloc(unsigned int size)
 	//[PROJECT'24.MS2] Implement this function
 	//Write your code here, remove the panic and write your code
 	//kpanic_into_prompt("kmalloc() is not implemented yet...!!");
-
 	acquireSleep();
 	// Block Allocator
 	if(size <= DYN_ALLOC_MAX_BLOCK_SIZE)

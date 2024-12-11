@@ -14,6 +14,7 @@
  */
 
 /*2016*/
+#define PGFLTEMP (UTEMP - PAGE_SIZE)
 #define USE_KHEAP 1
 
 // Global descriptor numbers
@@ -154,8 +155,6 @@
 //2016
 #define KERNEL_HEAP_START 0xF6000000
 #define KERNEL_HEAP_MAX 0xFFFFF000
-#define PGFLTEMP (UTEMP - PAGE_SIZE)
-
 //KHEAP pages number
 #define NUM_OF_KHEAP_PAGES ((KERNEL_HEAP_MAX-KERNEL_HEAP_START)/PAGE_SIZE)
 

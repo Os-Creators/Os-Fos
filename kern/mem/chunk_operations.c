@@ -207,6 +207,7 @@ void free_user_mem(struct Env* e, uint32 virtual_address, uint32 size)
 // inctst();
 // return;
  /*====================================*/
+  cprintf("ALLOCATED IS %d\n",allocated);
   for (uint32 itr = 0; itr < allocated; itr ++) {
 
    uint32 x = pt_get_page_permissions(e->env_page_directory,va);

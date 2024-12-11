@@ -337,3 +337,12 @@ void sys_acquire_shared_sleep()
 	syscall(SYS_acquire_shared_sleep,0,0,0,0,0);
 
 }
+void sys_init_queue(struct Env_Queue* queue){
+
+	syscall(SYS_init_queue,(uint32)queue,0,0,0,0);
+}
+void sys_wait_ksemaphore(struct semaphore *sem){
+	syscall(SYS_wait_ksemaphore,(uint32)sem,0,0,0,0);
+}
+void sys_signal_ksemaphore(struct semaphore *sem){
+	syscall(SYS_signal_ksemaphore,(uint32)sem,0,0,0,0);

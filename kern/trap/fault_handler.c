@@ -297,6 +297,7 @@ void page_fault_handler(struct Env * faulted_env, uint32 fault_va)
 
 		// 0 --> Normal mode (clean)
 		// 1 --> Modified mode (dirty)
+    
 		bool mode = (page_WS_max_sweeps >= 0)? 0 : 1;
 
 			cprintf("begin N = %d \n",page_WS_max_sweeps);
@@ -476,6 +477,7 @@ void replace(struct Env* faulted_env, int perms, uint32 fault_va)
 
 	remove_victim(faulted_env, perms, victim);
 
+
 	//cprintf("INSIDE CONDITION 7 \n");
 
 	// mapping in the new va
@@ -534,6 +536,7 @@ void remove_victim(struct Env* faulted_env, int perms ,struct WorkingSetElement*
 
 	unmap_frame(faulted_env->env_page_directory, victim->virtual_address);
 }
+
 int abs(int x)
 {
     return x >= 0 ? x : (-1*x);
@@ -641,12 +644,5 @@ void update_WS_data(bool mode,struct Env * faulted_env,struct WorkingSetElement*
 				break;
 		}
 }
-
-
-
-
-
-
-
 
 

@@ -52,6 +52,9 @@ enum
 	SYS_allocate_user_mem,
 	SYS_env_set_priority,
 	SYS_acquire_shared_sleep,
+  SYS_init_queue,
+	SYS_wait_ksemaphore,
+	SYS_signal_ksemaphore,
 	/*2024*/
 	//TODO: [PROJECT'24.MS1 - #02] [2] SYSTEM CALLS - Add suitable code here
 
