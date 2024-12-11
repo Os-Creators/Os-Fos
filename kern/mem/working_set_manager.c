@@ -92,6 +92,8 @@ inline void env_page_ws_invalidate(struct Env* e, uint32 virtual_address)
 
 				kfree(wse);
 
+				e->page_last_WS_element = NULL;
+
 				break;
 			}
 		}
