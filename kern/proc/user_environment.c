@@ -530,6 +530,11 @@ void env_free(struct Env *e)
 	delete_user_kern_stack(e);
 	cprintf("\n st2");
 
+	//		cprintf("Page working set after loading the program...\n");
+	//		env_page_ws_print(e);
+
+			//	cprintf("Table working set after loading the program...\n");
+			//	env_table_ws_print(e);
 	// [9] remove this program from the page file
 	/*(ALREADY DONE for you)*/
 	pf_free_env(e); /*(ALREADY DONE for you)*/ // (removes all of the program pages from the page file)
