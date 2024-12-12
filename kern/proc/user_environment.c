@@ -489,13 +489,6 @@ void env_free(struct Env *e)
 	LIST_FOREACH(object,&AllShares.shares_list){
 
 		if(object->ownerID == e->env_id){
-//			uint32 size = ROUNDUP(object->size, PAGE_SIZE);
-//			uint32 allocate=size/PAGE_SIZE;
-//			for(int i = 0 ; i<allocate;i++){
-//				uint32 pa = to_physical_address(object->framesStorage[i]);
-//				uint32 va = kheap_virtual_address(pa);
-//				unmap_frame(e->env_page_directory,va);
-//			}
 
 			LIST_REMOVE(&(AllShares.shares_list),object);
 			kfree(object->framesStorage);
