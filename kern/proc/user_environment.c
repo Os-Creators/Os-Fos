@@ -511,27 +511,13 @@ void env_free(struct Env *e)
 		uint32 *ptr_page_table;
 		ptr_page_table = (uint32*) kheap_virtual_address(pa);
 		// unmap all PTEs in this page table
-		uint32 page_table_entry_no;//pteno
-		int empty =1;
-		for (page_table_entry_no = 0; page_table_entry_no < 1024; page_table_entry_no++)
-		{
-			if((ptr_page_table[page_table_entry_no] & (~PERM_AVAILABLE)) != 0)
-			{
 
-			   empty = 0;
-			   break;
-			}
-
-		}
-		if(empty)
-		{
 		  pf_remove_env_page(e,(uint32)ptr_page_table); //remove page table from disk
 		  kfree(ptr_page_table);
 		 e->env_page_directory[page_dir_entry_no] = 0 ;
 
 		  //tlbflush();//should i really do this??
 
-		}
 	}
 	// [6] Directory table
 	cprintf("\n dir");
