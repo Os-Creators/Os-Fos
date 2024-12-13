@@ -953,7 +953,7 @@ void* create_user_kern_stack(uint32* ptr_user_page_directory)
 	return kstack ;
 //	panic("KERNEL HEAP is OFF! user kernel stack is not supported");
 #endif
-
+}
 /*2024*/
 //===========================================================
 // 6) DELETE USER KERNEL STACK (One Per Process):

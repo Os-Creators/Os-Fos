@@ -297,12 +297,12 @@ void page_fault_handler(struct Env * faulted_env, uint32 fault_va)
 
 		// 0 --> Normal mode (clean)
 		// 1 --> Modified mode (dirty)
-    
+
 		bool mode = (page_WS_max_sweeps >= 0)? 0 : 1;
 
-			cprintf("begin N = %d \n",page_WS_max_sweeps);
-			env_page_ws_print(faulted_env);
-			cprintf("\n");
+			//cprintf("begin N = %d \n",page_WS_max_sweeps);
+			//env_page_ws_print(faulted_env);
+			//cprintf("\n");
 
 			// find the victim and the needed sweeps
 			uint32 victim_sweeps;
@@ -316,9 +316,9 @@ void page_fault_handler(struct Env * faulted_env, uint32 fault_va)
 			int permissions = pt_get_page_permissions(faulted_env->env_page_directory,victim->virtual_address);
 			replace(faulted_env, permissions, fault_va); // it updates the pointer
 
-			cprintf("after N \n");
-			env_page_ws_print(faulted_env);
-			cprintf(" sweeps = %u \n",victim_sweeps);
+			//cprintf("after N \n");
+			//env_page_ws_print(faulted_env);
+			//cprintf(" sweeps = %u \n",victim_sweeps);
 
 	}
 }

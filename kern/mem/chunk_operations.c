@@ -130,7 +130,7 @@ void* sys_sbrk(int numOfPages)
 	 * NOTES:
 	 * 	1) As in real OS, allocate pages lazily. While sbrk moves the segment break, pages are not allocated
 	 * 		until the user program actually tries to access data in its heap (i.e. will be allocated via the fault handler).
-	 * 	2) Allocating additional pages for a processï¿½ heap will fail if, for example, the free frames are exhausted
+	 * 	2) Allocating additional pages for a process½ heap will fail if, for example, the free frames are exhausted
 	 * 		or the break exceed the limit of the dynamic allocator. If sys_sbrk fails, the net effect should
 	 * 		be that sys_sbrk returns (void*) -1 and that the segment break and the process heap are unaffected.
 	 * 		You might have to undo any operations you have done so far in this case.
@@ -146,18 +146,18 @@ void* sys_sbrk(int numOfPages)
 	{
 	   return (void*)env->segment_break;
 	}
-	uint32* prev_segment_break = env->segment_break;
+	uint32 prev_segment_break = (uint32)env->segment_break;
 	uint32 increment = numOfPages * PAGE_SIZE;
-	uint32* new_segment_break = (uint32*)((char*)env->segment_break + increment);
-
+	uint32 new_segment_break = ((uint32)env->segment_break) + increment;
+	if (new_segment_break > (uint32)env->hardlimit)
+	{
+	    return (void*)-1;
+	}
 	allocate_user_mem(env,(uint32)prev_segment_break,increment); //inc in bytes
 
-		if (new_segment_break > env->hardlimit)
-		{
-		   return (void*)-1;
-		}
 
-		env->segment_break = new_segment_break;
+
+		env->segment_break = (uint32*)new_segment_break;
 		return (void*)prev_segment_break;
 }
 
@@ -178,7 +178,7 @@ void allocate_user_mem(struct Env* e, uint32 virtual_address, uint32 size)
   //TODO: [PROJECT'24.MS2 - #13] [3] USER HEAP [KERNEL SIDE] - allocate_user_mem()
   // Write your code here, remove the panic and write your code
   //panic("allocate_user_mem() is not implemented yet...!!");
-       uint32 * ptr_page_table=NULL;
+    uint32 * ptr_page_table=NULL;
     size = ROUNDUP(size, PAGE_SIZE);
     uint32 allocated=size/PAGE_SIZE;
     uint32 ptr =virtual_address;
