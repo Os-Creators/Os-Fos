@@ -141,8 +141,6 @@ void* kmalloc(unsigned int size)
 		return NULL;
 	}
 
-
-
 	bool page_found = 0;
 	uint32 return_addr;
 
