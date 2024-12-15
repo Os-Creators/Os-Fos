@@ -238,6 +238,7 @@ int getSharedObject(int32 ownerID, char* shareName, void* virtual_address)
 
 	if(shared_obj == NULL)
 	{
+		releaseSharedSleep();
 	    return E_SHARED_MEM_NOT_EXISTS;
 	}
 
@@ -268,6 +269,7 @@ int getSharedObject(int32 ownerID, char* shareName, void* virtual_address)
 
 	if(holding_spinlock(&(AllShares.shareslock))) release_spinlock(&(AllShares.shareslock));
 
+	releaseSharedSleep();
 	return shared_obj->ID;
 }
 
@@ -325,6 +327,7 @@ int freeSharedObject(int32 sharedObjectID, void *startVA)
 	  if(sObject == NULL || sObject->references == 0)
 	  {
 		  if(holding_spinlock(&(AllShares.shareslock))==1)release_spinlock(&(AllShares.shareslock));
+		  releaseSharedSleep();
 		  return -1;
 	  }
 
@@ -358,13 +361,13 @@ int freeSharedObject(int32 sharedObjectID, void *startVA)
 
 			  if(empty)
 			  {
-				  cprintf("after disk1\n");
+				  //cprintf("after disk1\n");
 
 				  pf_remove_env_page(myenv,(uint32)ptr_page_table); //remove page table from disk
 				  kfree(ptr_page_table);
 				  pd_clear_page_dir_entry(myenv->env_page_directory,(uint32)start); //remove page table entry from page directory
 
-				  cprintf("after disk2\n");
+				 // cprintf("after disk2\n");
 			 }
 	     }
 
@@ -382,6 +385,7 @@ int freeSharedObject(int32 sharedObjectID, void *startVA)
 
 	   if(holding_spinlock(&(AllShares.shareslock))==1)release_spinlock(&(AllShares.shareslock));
 
+	   releaseSharedSleep();
 	   return 0;
 }
 

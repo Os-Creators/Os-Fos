@@ -301,7 +301,7 @@ void* smalloc(char *sharedVarName, uint32 size, uint8 isWritable)
 
 			uint32* va = (uint32*)(((uint32)myEnv->hardlimit + PAGE_SIZE) + (i*PAGE_SIZE));
 			if(va != NULL){
-				//sys_acquire_shared_sleep();
+				sys_acquire_shared_sleep();
 				int ret = sys_createSharedObject(sharedVarName,size,isWritable,va);
 
 				if(ret < 0 )
@@ -419,6 +419,7 @@ void* sget(int32 ownerEnvID, char *sharedVarName)
 			uint32* va = (uint32*)(((uint32)myEnv->hardlimit + PAGE_SIZE) + (i*PAGE_SIZE));
 			if(va != NULL){
 
+				sys_acquire_shared_sleep();
 				int ret = sys_getSharedObject(ownerEnvID,sharedVarName,va);
 				if(ret < 0)
 					return NULL;
@@ -507,6 +508,7 @@ void sfree(void* virtual_address)
 	//cprintf("index in sfree %d\n",pageIndex);
 	//va &= 0x7FFFFFFF;
 
+	sys_acquire_shared_sleep();
 	sys_freeSharedObject(ID,(void*)va);
 
 }
