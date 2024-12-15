@@ -92,7 +92,7 @@ inline void env_page_ws_invalidate(struct Env* e, uint32 virtual_address)
 
 				kfree(wse);
 
-				e->page_last_WS_element = NULL;
+				reorder_WSList(e);
 
 				break;
 			}
@@ -367,3 +367,26 @@ void half_WS_Size(struct Env* e, int isImmidiate)
 {
 	panic("not handled yet");
 }
+/////////////////////////////////////////////////////// Free user mem helper functions
+void reorder_WSList (struct Env* e)
+{
+	   struct WorkingSetElement* last_element = e->page_last_WS_element;
+
+		if(last_element != NULL) // Full WS List
+		{
+			struct WorkingSetElement *wse;
+			LIST_FOREACH(wse, &(e->page_WS_list))
+			{
+               if(wse == last_element)
+               {
+                  break;
+               }
+
+               LIST_INSERT_TAIL(&(e->page_WS_list),wse);
+               LIST_REMOVE(&(e->page_WS_list),wse);
+			}
+		}
+		
+		last_element = NULL;
+}
+
