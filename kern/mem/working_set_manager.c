@@ -77,11 +77,15 @@ inline void env_page_ws_invalidate(struct Env* e, uint32 virtual_address)
 	}
 	else
 	{
+		cprintf("INSIDE esle \n");
+
 		struct WorkingSetElement *wse;
 		LIST_FOREACH(wse, &(e->page_WS_list))
 		{
+			cprintf("INSIDE LOOP \n");
 			if(ROUNDDOWN(wse->virtual_address,PAGE_SIZE) == ROUNDDOWN(virtual_address,PAGE_SIZE))
 			{
+				cprintf("INSIDE CONDITION \n");
 				unmap_frame(e->env_page_directory, wse->virtual_address);
 
 				if (e->page_last_WS_element == wse)
@@ -91,8 +95,11 @@ inline void env_page_ws_invalidate(struct Env* e, uint32 virtual_address)
 				LIST_REMOVE(&(e->page_WS_list), wse);
 
 				kfree(wse);
-
+							cprintf("before reorder \n");
+							env_page_ws_print(e);
 				reorder_WSList(e);
+							cprintf("after reorder \n");
+							env_page_ws_print(e);
 
 				break;
 			}

@@ -130,7 +130,7 @@ void* sys_sbrk(int numOfPages)
 	 * NOTES:
 	 * 	1) As in real OS, allocate pages lazily. While sbrk moves the segment break, pages are not allocated
 	 * 		until the user program actually tries to access data in its heap (i.e. will be allocated via the fault handler).
-	 * 	2) Allocating additional pages for a process½ heap will fail if, for example, the free frames are exhausted
+	 * 	2) Allocating additional pages for a processï¿½ heap will fail if, for example, the free frames are exhausted
 	 * 		or the break exceed the limit of the dynamic allocator. If sys_sbrk fails, the net effect should
 	 * 		be that sys_sbrk returns (void*) -1 and that the segment break and the process heap are unaffected.
 	 * 		You might have to undo any operations you have done so far in this case.
@@ -217,7 +217,10 @@ void free_user_mem(struct Env* e, uint32 virtual_address, uint32 size)
        //freeFree ALL pagespage file
     pf_remove_env_page(e,va);
     //Free ONLY pages that are resident in the working set from the memory
+    cprintf("INSIDE free user mem 1\n");
+
     env_page_ws_invalidate(e, va);
+    cprintf("INSIDE free user mem 2\n");
     //unmap
     unmap_frame(e->env_page_directory,va);
     }
