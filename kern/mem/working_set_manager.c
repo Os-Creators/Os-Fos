@@ -384,13 +384,14 @@ void reorder_WSList (struct Env* e)
 			struct WorkingSetElement *wse;
 			LIST_FOREACH(wse, &(e->page_WS_list))
 			{
-               if(wse == last_element)
-               {
-                  break;
-               }
-
-               LIST_INSERT_TAIL(&(e->page_WS_list),wse);
-               LIST_REMOVE(&(e->page_WS_list),wse);
+		               if(wse == last_element)
+		               {
+		                  break;
+		               }
+                          struct WorkingSetElement* temp_wse = wse;
+                          LIST_REMOVE(&(e->page_WS_list),wse);
+                          LIST_INSERT_TAIL(&(e->page_WS_list),temp_wse);
+              
 			}
 		}
 		
