@@ -193,14 +193,8 @@ void free(void* virtual_address)
 
 		//un_map the pages
 		cprintf("IN FREE %x\n",virtual_address);
-		uint32 before = sys_calculate_free_frames();
-			cprintf("before FREE %d\n",before);
-
 		sys_free_user_mem((uint32)virtual_address,(user_pages_arr[pageIndex].number_of_pages*PAGE_SIZE));
 
-		uint32 after = sys_calculate_free_frames();
-			cprintf("after FREE %d\n",after);
-			cprintf("TOTAL FREE %d\n",before - after);
 		//before my block is empty
 	if(pageIndex != 0)
 		if(user_pages_arr[pageIndex-1].is_free)
@@ -376,7 +370,6 @@ void* sget(int32 ownerEnvID, char *sharedVarName)
 	// Write your code here, remove the panic and write your code
 	//panic("sget() is not implemented yet...!!");
 	//return NULL;
-	sys_acquire_shared_sleep();
 
 	int size = sys_getSizeOfSharedObject(ownerEnvID,sharedVarName);
 
@@ -426,6 +419,7 @@ void* sget(int32 ownerEnvID, char *sharedVarName)
 			uint32* va = (uint32*)(((uint32)myEnv->hardlimit + PAGE_SIZE) + (i*PAGE_SIZE));
 			if(va != NULL){
 
+				sys_acquire_shared_sleep();
 				int ret = sys_getSharedObject(ownerEnvID,sharedVarName,va);
 				if(ret < 0)
 					return NULL;
@@ -503,8 +497,6 @@ void sfree(void* virtual_address)
 		    // Write your code here, remove the panic and write your code
 		    //panic("sfree() is not implemented yet...!!");
 
-	uint32 before = sys_calculate_free_frames();
-	cprintf("before sFREE %d\n",before);
 	uint32 va = ROUNDDOWN((uint32)virtual_address,PAGE_SIZE);
 	uint32 pageIndex = (va - ((uint32)myEnv->hardlimit+PAGE_SIZE))/PAGE_SIZE;
 
@@ -512,12 +504,11 @@ void sfree(void* virtual_address)
 	user_pages_arr[pageIndex].ID_shared = -1;
 
 	free((void*)va);
-	uint32 after = sys_calculate_free_frames();
-	cprintf("after sFREE %d\n",after);
-	cprintf("TOTAL sFREE %d\n",before - after);
+	cprintf("ID in sfree %d\n",ID);
 	//cprintf("index in sfree %d\n",pageIndex);
 	//va &= 0x7FFFFFFF;
 
+	sys_acquire_shared_sleep();
 	sys_freeSharedObject(ID,(void*)va);
 
 }

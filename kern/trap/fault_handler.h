@@ -73,17 +73,18 @@ void table_fault_handler(struct Env * curenv, uint32 fault_va);
 
 int is_heap_address(uint32 address);
 int is_stack_address(uint32 address);
-
-bool NthChance(bool mode,struct Env * faulted_env, uint32 fault_va);
-bool checkVictimPage(bool mode,struct Env* faulted_env, int perms);
 void update_pointer(struct Env* faulted_env,struct WorkingSetElement** pointer);
-void replace(struct Env* faulted_env, int perms , uint32 fault_va);
-void remove_victim(struct Env* faulted_env, int perms ,struct WorkingSetElement* victim);
+void replace(struct Env* faulted_env,uint32 fault_va);
+void remove_victim(struct Env* faulted_env,struct WorkingSetElement* victim);
 int abs(int x);
 
 struct WorkingSetElement* findVictim(bool mode,struct Env * faulted_env,uint32* sweeps);
 uint32 countNeededSweeps(bool mode,struct Env * faulted_env,struct WorkingSetElement* ws_ele);
 void update_WS_data(bool mode,struct Env * faulted_env,struct WorkingSetElement* victim,uint32* sweeps);
+
+
+//bool NthChance(bool mode,struct Env * faulted_env, uint32 fault_va);
+//bool checkVictimPage(bool mode,struct Env* faulted_env, int perms);
 
 #endif /* KERN_FAULT_HANDLER_H_ */
 

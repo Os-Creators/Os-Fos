@@ -519,10 +519,11 @@ void env_free(struct Env *e)
 	cprintf("before ws1 = %d \n", counters7.freeBuffered + counters7.freeNotBuffered);
 
 	struct WorkingSetElement *wse;
+	int i =0;
 	LIST_FOREACH(wse, &(e->page_WS_list))
 	{
 		env_page_ws_invalidate(e, wse->virtual_address);
-
+		//cprintf("j%d",i++);
 	}
 	struct freeFramesCounters counters = calculate_available_frames();
 	cprintf("after ws1 = %d \n", counters.freeBuffered + counters.freeNotBuffered);
@@ -533,6 +534,7 @@ void env_free(struct Env *e)
 	cprintf("\n sem");
 	cprintf("list size : %d\n",LIST_SIZE(&AllShares.shares_list));
 
+	uint32 by_smalloc = 0;
 	struct Share* object;
 	if(!holding_spinlock(&(AllShares.shareslock))) acquire_spinlock(&(AllShares.shareslock));
 	cprintf("here\n");
@@ -564,40 +566,41 @@ void env_free(struct Env *e)
 
 
 			object->references--;
-			//if(object->references == 0){
-						LIST_REMOVE(&(AllShares.shares_list),object);
 
-						struct freeFramesCounters counters100 = calculate_available_frames();
-						cprintf("before objDELETE = %d \n", counters100.freeBuffered + counters100.freeNotBuffered);
-
-						kfree(object->framesStorage);
-						kfree(object);
-
-						struct freeFramesCounters counters101 = calculate_available_frames();
-						cprintf("after objDELETE = %d \n", counters101.freeBuffered + counters101.freeNotBuffered);
-
-
-					//}
+//			//if(object->references == 0){
+//			LIST_REMOVE(&(AllShares.shares_list),object);
+//
+//			struct freeFramesCounters counters100 = calculate_available_frames();
+//			cprintf("before objDELETE = %d \n", counters100.freeBuffered + counters100.freeNotBuffered);
+//
+//			kfree(object->framesStorage);
+//			kfree(object);
+//
+//			struct freeFramesCounters counters101 = calculate_available_frames();
+//			cprintf("after objDELETE = %d \n", counters101.freeBuffered + counters101.freeNotBuffered);
+//
+//
+//			//}
 
 
 
 		}
-//		struct sget_data* new_sget;
-//		LIST_FOREACH(new_sget,&(object->All_sget.sget_list)){
-//			if(new_sget->sget_env_id == e->env_id){
-//				cprintf("\nyes get2");
-//
-//				free_user_mem(e, new_sget->sget_va, object->size);
-//				strcpy(new_sget->in_sget,"no");
-//
-//				LIST_REMOVE(&(object->All_sget.sget_list),new_sget);
-//				kfree(new_sget);
-//
-//				object->references--;
-//
-//			}
-//		}
-//
+		struct sget_data* new_sget;
+		LIST_FOREACH(new_sget,&(object->All_sget.sget_list)){
+			if(new_sget->sget_env_id == e->env_id){
+				cprintf("\nyes get2");
+
+				free_user_mem(e, new_sget->sget_va, object->size);
+				strcpy(new_sget->in_sget,"no");
+
+				LIST_REMOVE(&(object->All_sget.sget_list),new_sget);
+				kfree(new_sget);
+
+				object->references--;
+
+			}
+		}
+
 //		if(strcmp(object->in_sget , "yes") == 0){
 //			cprintf("\nyes get");
 //			if(object->sget_env_id == e->env_id){
@@ -624,20 +627,20 @@ void env_free(struct Env *e)
 //
 //			}
 //		}
-//		if(object->references == 0){
-//			LIST_REMOVE(&(AllShares.shares_list),object);
-//
-//			struct freeFramesCounters counters100 = calculate_available_frames();
-//			cprintf("before objDELETE = %d \n", counters100.freeBuffered + counters100.freeNotBuffered);
-//
-//			kfree(object->framesStorage);
-//			kfree(object);
-//
-//			struct freeFramesCounters counters101 = calculate_available_frames();
-//			cprintf("after objDELETE = %d \n", counters101.freeBuffered + counters101.freeNotBuffered);
-//
-//
-//		}
+		if(object->references == 0){
+			LIST_REMOVE(&(AllShares.shares_list),object);
+
+			struct freeFramesCounters counters100 = calculate_available_frames();
+			cprintf("before objDELETE = %d \n", counters100.freeBuffered + counters100.freeNotBuffered);
+
+			kfree(object->framesStorage);
+			kfree(object);
+
+			struct freeFramesCounters counters101 = calculate_available_frames();
+			cprintf("after objDELETE = %d \n", counters101.freeBuffered + counters101.freeNotBuffered);
+
+
+		}
 
 	}
 	if(holding_spinlock(&(AllShares.shareslock))) release_spinlock(&(AllShares.shareslock));
@@ -659,40 +662,32 @@ void env_free(struct Env *e)
 		uint32 *ptr_page_table;
 		ptr_page_table = (uint32*) kheap_virtual_address(pa);
 
-		for (int pteno = 0; pteno < 1024; pteno++)
-		{
-			uint32 x = ptr_page_table[pteno] & 0x00000FFF;
-			uint32 perm_available=0x800;
-			if (x==  ( x | ( perm_available))) // Check if the PTE is present
-			{
-				uint32 dfn = EXTRACT_ADDRESS(ptr_page_table[pteno]);
-				ptr_page_table[pteno] = 0;
-				// and declare it free
-				struct FrameInfo* ptr_frame_info = to_frame_info(dfn);
-
-				if( ptr_frame_info != 0 )
-				{
-
-					decrement_references(ptr_frame_info);
-
-					/*********************************************************************************/
-					/*NEW'23 el7:)
-					 * [DONE] unmap_frame(): KEEP THE VALUES OF THE AVAILABLE BITS*/
-					uint32 pte_available_bits = ptr_page_table[pteno] & PERM_AVAILABLE;
-					ptr_page_table[pteno] = pte_available_bits;
-					/*********************************************************************************/
-
-
-				}
-				//free_disk_frame(dfn);
-			}
-//			// remove the disk page from disk page table
-//			uint32 dfn=ptr_page_table[pteno];
-//			ptr_page_table[pteno] = 0;
-//			// and declare it free
-//			free_frame((struct FrameInfo *)dfn);
-			//free_disk_frame(dfn);
-		}
+//		for (int pteno = 0; pteno < 1024; pteno++)
+//		{
+//			//its user
+//			uint32 x = ptr_page_table[pteno] & 0x00000FFF;
+//			uint32 perm_available=0x800;
+//			if (x==  ( x | ( perm_available))) // Check if the PTE is present
+//			{
+//				uint32 dfn = EXTRACT_ADDRESS(ptr_page_table[pteno]);
+//				ptr_page_table[pteno] = 0;
+//				// and declare it free
+//				struct FrameInfo* ptr_frame_info = to_frame_info(dfn);
+//
+//				if( ptr_frame_info != 0 )
+//				{
+//					decrement_references(ptr_frame_info);
+//					/*********************************************************************************/
+//					/*NEW'23 el7:)
+//					 * [DONE] unmap_frame(): KEEP THE VALUES OF THE AVAILABLE BITS*/
+//					uint32 pte_available_bits = ptr_page_table[pteno] & PERM_AVAILABLE;
+//					ptr_page_table[pteno] = pte_available_bits;
+//					/*********************************************************************************/
+//
+//				}
+//			}
+//
+//		}
 
 		e->env_page_directory[page_dir_entry_no] = 0 ;
 		kfree(ptr_page_table);

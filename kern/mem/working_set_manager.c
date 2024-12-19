@@ -77,11 +77,17 @@ inline void env_page_ws_invalidate(struct Env* e, uint32 virtual_address)
 	}
 	else
 	{
+		//cprintf("INSIDE esle \n");
+
 		struct WorkingSetElement *wse;
+		//cprintf("ws size %d",LIST_SIZE(&(e->page_WS_list)));int i =0;
+
 		LIST_FOREACH(wse, &(e->page_WS_list))
 		{
+			//cprintf("INSIDE LOOP \n");
 			if(ROUNDDOWN(wse->virtual_address,PAGE_SIZE) == ROUNDDOWN(virtual_address,PAGE_SIZE))
 			{
+				//cprintf("INSIDE CONDITION \n");
 				unmap_frame(e->env_page_directory, wse->virtual_address);
 
 				if (e->page_last_WS_element == wse)
@@ -90,13 +96,19 @@ inline void env_page_ws_invalidate(struct Env* e, uint32 virtual_address)
 				}
 				LIST_REMOVE(&(e->page_WS_list), wse);
 
+				//cprintf("i %d",i++);
 				kfree(wse);
-
+							//cprintf("before reorder \n");
+							//env_page_ws_print(e);
+				//reorder_WSList(e);
+							//cprintf("after reorder \n");
+							//env_page_ws_print(e);
 				e->page_last_WS_element = NULL;
 
 				break;
 			}
 		}
+		//cprintf("ws size after%d",LIST_SIZE(&(e->page_WS_list)));
 	}
 }
 void env_page_ws_print(struct Env *e)
@@ -367,3 +379,29 @@ void half_WS_Size(struct Env* e, int isImmidiate)
 {
 	panic("not handled yet");
 }
+/////////////////////////////////////////////////////// Free user mem helper functions
+void reorder_WSList (struct Env* e)
+{
+	cprintf("after reorder \n");
+
+	   struct WorkingSetElement* last_element = e->page_last_WS_element;
+
+		if(last_element != NULL) // Full WS List
+		{
+			struct WorkingSetElement *wse;
+			LIST_FOREACH(wse, &(e->page_WS_list))
+			{
+		               if(wse == last_element)
+		               {
+		                  break;
+		               }
+                          struct WorkingSetElement* temp_wse = wse;
+                          LIST_REMOVE(&(e->page_WS_list),wse);
+                          LIST_INSERT_TAIL(&(e->page_WS_list),temp_wse);
+
+			}
+		}
+
+		last_element = NULL;
+}
+

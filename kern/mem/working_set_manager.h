@@ -37,6 +37,7 @@ inline uint32 env_table_ws_get_virtual_address(struct Env* e, uint32 entry_index
 inline uint32 env_table_ws_get_time_stamp(struct Env* e, uint32 entry_index);
 inline uint32 env_table_ws_is_entry_empty(struct Env* e, uint32 entry_index);
 void env_table_ws_print(struct Env *curenv);
+void reorder_WSList (struct Env* e);
 
 // Change WS Sizes For PRIORITY  =========================================================
 void cut_paste_WS(struct WorkingSetElement* newWS, int newSize, struct Env* e);

@@ -10,7 +10,7 @@
 //#include <inc/memlayout.h>
 #include <inc/environment_definitions.h>
 #include <kern/conc/spinlock.h>
-//LIST_HEAD(sget_List, sget_data);
+LIST_HEAD(sget_List, sget_data);
 
 struct Share
 {
@@ -31,17 +31,13 @@ struct Share
 
 	char in_smalloc[64];
 	uint32 smalloc_va;
-//	char in_sget[64];
-//	uint32 sget_va;
-//	uint32 sget_env_id;
-//	uint32 sget_va2;
-//	uint32 sget_env_id2;
-//	char in_sget2[64];
-//	char firstTime[64];
-//	struct
-//	{
-//		struct sget_List sget_list ;	//List of all share variables created by any process
-//	}All_sget;
+
+	char firstTime[64];
+
+	struct
+	{
+		struct sget_List sget_list ;
+	}All_sget;
 	//to store frames to be shared
 	struct FrameInfo** framesStorage;
 
@@ -49,26 +45,17 @@ struct Share
 	LIST_ENTRY(Share) prev_next_info;
 
 };
-//struct sget_data{
-//	char in_sget[64];
-//	uint32 sget_va;
-//	uint32 sget_env_id;
-//	LIST_ENTRY(sget_data) prev_next_info;
-//};
+
+struct sget_data{
+	char in_sget[64];
+	uint32 sget_va;
+	uint32 sget_env_id;
+	LIST_ENTRY(sget_data) prev_next_info;
+};
 
 struct sleeplock shared_sleeplock;
 
-/*inline void acquireSharedSleep()
-{
-	if(!holding_sleeplock(&shared_sleeplock))
-		acquire_sleeplock(&shared_sleeplock);
-}
 
-inline void releaseSharedSleep()
-{
-	if(holding_sleeplock(&shared_sleeplock))
-		release_sleeplock(&shared_sleeplock);
-}*/
 //List of all shared objects
 LIST_HEAD(Share_List, Share);		// Declares 'struct Share_List'
 

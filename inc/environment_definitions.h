@@ -92,6 +92,7 @@ struct Context {
   uint32 ebp;
   uint32 eip;
 };
+//LIST_HEAD(sget_List, sget_data);
 
 struct Env {
 	//================
@@ -182,9 +183,22 @@ struct Env {
 	uint32 nPageIn, nPageOut, nNewPageAdded;
 	uint32 nClocks ;
 
+	//shimaa
 	int env_ticks;
+//	char firstTime[64];
+//
+//	struct
+//	{
+//		struct sget_List sget_list ;
+//	}All_sget;
 
 };
+//struct sget_data{
+//	char in_sget[64];
+//	uint32 sget_va;
+//	uint32 sget_env_id;
+//	LIST_ENTRY(sget_data) prev_next_info;
+//};
 
 #define PRIORITY_LOW    		1
 #define PRIORITY_BELOWNORMAL    2
