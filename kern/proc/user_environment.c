@@ -19,7 +19,6 @@
 #include "../mem/shared_memory_manager.h"
 
 
-
 /******************************/
 /* DATA & DECLARATIONS */
 /******************************/
@@ -106,6 +105,9 @@ void env_init(void)
 // Allocates a new env and loads the named user program into it.
 struct Env* env_create(char* user_program_name, unsigned int page_WS_size, unsigned int LRU_second_list_size, unsigned int percent_WS_pages_to_remove)
 {
+	struct freeFramesCounters counters = calculate_available_frames();
+	//cprintf("\nin create = %d \n", counters.freeBuffered + counters.freeNotBuffered);
+
 	//[1] get pointer to the start of the "user_program_name" program in memory
 	// Hint: use "get_user_program_info" function,
 	// you should set the following "ptr_program_start" by the start address of the user program
@@ -126,6 +128,8 @@ struct Env* env_create(char* user_program_name, unsigned int page_WS_size, unsig
 	{
 		return NULL;
 	}
+	struct freeFramesCounters counters2 = calculate_available_frames();
+	//cprintf("after alloc env = %d \n", counters2.freeBuffered + counters2.freeNotBuffered);
 
 	//[2.5 - 2012] Set program name inside the environment
 	//e->prog_name = ptr_user_program_info->name ;
@@ -158,6 +162,8 @@ struct Env* env_create(char* user_program_name, unsigned int page_WS_size, unsig
 #endif
 	//[4] initialize the new environment by the virtual address of the page directory
 	// Hint: use "initialize_environment" function
+	struct freeFramesCounters counters3 = calculate_available_frames();
+	//cprintf("after dir = %d \n", counters3.freeBuffered + counters3.freeNotBuffered);
 
 	//2016
 	e->page_WS_max_size = page_WS_size;
@@ -176,6 +182,8 @@ struct Env* env_create(char* user_program_name, unsigned int page_WS_size, unsig
 		e->percentage_of_WS_pages_to_be_removed = percent_WS_pages_to_remove;
 
 	initialize_environment(e, ptr_user_page_directory, phys_user_page_directory);
+	struct freeFramesCounters counters4 = calculate_available_frames();
+	//cprintf("after initialize env = %d \n", counters4.freeBuffered + counters4.freeNotBuffered);
 
 	// We want to load the program into the user virtual space
 	// each program is constructed from one or more segments,
@@ -286,6 +294,8 @@ struct Env* env_create(char* user_program_name, unsigned int page_WS_size, unsig
 			//LOG_STRING(" -------------------- PAGE FILE: segment remaining area is written (the zeros) ");
 		}
 
+		struct freeFramesCounters counters6 = calculate_available_frames();
+		//cprintf("after seg = %d \n", counters6.freeBuffered + counters6.freeNotBuffered);
 
 		///[8] Clear the modified bit of each page in the pageWorkingSet to indicate it's a clean version
 #if USE_KHEAP
@@ -316,9 +326,13 @@ struct Env* env_create(char* user_program_name, unsigned int page_WS_size, unsig
 			}
 		}
 #endif
+		struct freeFramesCounters counters7 = calculate_available_frames();
+		//cprintf("after ws1 = %d \n", counters7.freeBuffered + counters7.freeNotBuffered);
 
 		//[9] now set the entry point of the environment
 		set_environment_entry_point(e, ptr_user_program_info->ptr_start);
+		struct freeFramesCounters counters10 = calculate_available_frames();
+		//cprintf("after ws point1 = %d \n", counters10.freeBuffered + counters10.freeNotBuffered);
 
 		//[10] Allocate and map ONE page for the program's initial stack
 		// at virtual address USTACKTOP - PAGE_SIZE.
@@ -336,6 +350,9 @@ struct Env* env_create(char* user_program_name, unsigned int page_WS_size, unsig
 			struct FrameInfo *pp = NULL;
 			allocate_frame(&pp);
 			loadtime_map_frame(e->env_page_directory, pp, stackVa, PERM_USER | PERM_WRITEABLE);
+
+			struct freeFramesCounters counters11 = calculate_available_frames();
+			//cprintf("after staaa = %d \n", counters11.freeBuffered + counters11.freeNotBuffered);
 
 			//initialize new page by 0's
 			memset((void*)stackVa, 0, PAGE_SIZE);
@@ -398,6 +415,8 @@ struct Env* env_create(char* user_program_name, unsigned int page_WS_size, unsig
 			int success = pf_add_empty_env_page(e, (uint32)stackVa, 1);
 			//if(success == 0) LOG_STATMENT(cprintf("STACK Page added to page file successfully\n"));
 		}
+		struct freeFramesCounters counters8 = calculate_available_frames();
+		//cprintf("after ws2,stack = %d \n", counters8.freeBuffered + counters8.freeNotBuffered);
 
 		//2020
 		//LRU Lists: Reset PRESENT bit of all pages in Second List
@@ -459,6 +478,28 @@ void env_start(void)
 //===============================
 // Frees environment "e" and all memory it uses.
 //
+
+// int my_get_page_permissions(uint32* page_directory, uint32 index ,uint32 *ptr_page_table)
+//{
+////	//[1] Get the table
+////	uint32* ptr_page_table ;
+////	ptr_page_table = ptr_page_directory[index];
+//
+//	//int ret = my_get_page_table(page_directory, index, &ptr_page_table);
+//
+//	//[2] If exists, return the permissions
+//	if (ptr_page_table != NULL)
+//	{
+//		//cprintf("va=%x perm = %x\n", virtual_address, ptr_page_table[PTX(virtual_address)] & 0x00000FFF);
+//		return (ptr_page_table[index] & 0x00000FFF);
+//	}
+//	//[3] Else, return -1
+//	else
+//	{
+//		//cprintf("va=%x not exist and has no page table\n", virtual_address);
+//		return -1;
+//	}
+//}
 void env_free(struct Env *e)
 {
 	/*REMOVE THIS LINE BEFORE START CODING*/
@@ -474,29 +515,136 @@ void env_free(struct Env *e)
 	// [1] All pages in the page working set
 	// [2] Working set itself
 	cprintf("\n wk");
+	struct freeFramesCounters counters7 = calculate_available_frames();
+	cprintf("before ws1 = %d \n", counters7.freeBuffered + counters7.freeNotBuffered);
+
 	struct WorkingSetElement *wse;
 	LIST_FOREACH(wse, &(e->page_WS_list))
 	{
 		env_page_ws_invalidate(e, wse->virtual_address);
+
 	}
+	struct freeFramesCounters counters = calculate_available_frames();
+	cprintf("after ws1 = %d \n", counters.freeBuffered + counters.freeNotBuffered);
+
 	//kfree(&(e->page_WS_list));
 	// [3] ALL shared objects (if any)
 	// [4] ALL semaphores (if any)
 	cprintf("\n sem");
+	cprintf("list size : %d\n",LIST_SIZE(&AllShares.shares_list));
 
 	struct Share* object;
 	if(!holding_spinlock(&(AllShares.shareslock))) acquire_spinlock(&(AllShares.shareslock));
+	cprintf("here\n");
 	LIST_FOREACH(object,&AllShares.shares_list){
 
 		if(object->ownerID == e->env_id){
+			cprintf("here2\n");
+//			uint32 pa = to_physical_address(object->framesStorage[0]);
+			//to_frame_info()
+//			uint32 va = kheap_virtual_address(pa);
+			//strcmp(object->in_smalloc , "yes");
+			if(strcmp(object->in_smalloc , "yes") == 0){
+				cprintf("\nyes");
 
-			LIST_REMOVE(&(AllShares.shares_list),object);
-			kfree(object->framesStorage);
-			kfree(object);
+				free_user_mem(e, object->smalloc_va, object->size);
+				strcpy(object->in_smalloc,"no");
+			}
+
+			/*if(strcmp(object->in_sget , "yes") == 0){
+				cprintf("\nyes get");
+				if(object->sget_env_id == e->env_id){
+					free_user_mem(e, object->sget_va, object->size);
+					strcpy(object->in_sget,"no");
+				}else if(object->sget_env_id2 == e->env_id){
+					free_user_mem(e, object->sget_va2, object->size);
+					strcpy(object->in_sget,"no");
+				}
+			}*/
+
+
+			object->references--;
+			//if(object->references == 0){
+						LIST_REMOVE(&(AllShares.shares_list),object);
+
+						struct freeFramesCounters counters100 = calculate_available_frames();
+						cprintf("before objDELETE = %d \n", counters100.freeBuffered + counters100.freeNotBuffered);
+
+						kfree(object->framesStorage);
+						kfree(object);
+
+						struct freeFramesCounters counters101 = calculate_available_frames();
+						cprintf("after objDELETE = %d \n", counters101.freeBuffered + counters101.freeNotBuffered);
+
+
+					//}
+
+
 
 		}
+//		struct sget_data* new_sget;
+//		LIST_FOREACH(new_sget,&(object->All_sget.sget_list)){
+//			if(new_sget->sget_env_id == e->env_id){
+//				cprintf("\nyes get2");
+//
+//				free_user_mem(e, new_sget->sget_va, object->size);
+//				strcpy(new_sget->in_sget,"no");
+//
+//				LIST_REMOVE(&(object->All_sget.sget_list),new_sget);
+//				kfree(new_sget);
+//
+//				object->references--;
+//
+//			}
+//		}
+//
+//		if(strcmp(object->in_sget , "yes") == 0){
+//			cprintf("\nyes get");
+//			if(object->sget_env_id == e->env_id){
+//				cprintf("\nyes get2");
+//
+//				free_user_mem(e, object->sget_va, object->size);
+//				strcpy(object->in_sget,"no");
+//
+//
+//				object->references--;
+//
+//			}
+//		}
+//		if(strcmp(object->in_sget2 , "yes") == 0){
+//			cprintf("\nyes get");
+//			if(object->sget_env_id2 == e->env_id){
+//				cprintf("\nyes get2");
+//
+//				free_user_mem(e, object->sget_va2, object->size);
+//				strcpy(object->in_sget2,"no");
+//
+//
+//				object->references--;
+//
+//			}
+//		}
+//		if(object->references == 0){
+//			LIST_REMOVE(&(AllShares.shares_list),object);
+//
+//			struct freeFramesCounters counters100 = calculate_available_frames();
+//			cprintf("before objDELETE = %d \n", counters100.freeBuffered + counters100.freeNotBuffered);
+//
+//			kfree(object->framesStorage);
+//			kfree(object);
+//
+//			struct freeFramesCounters counters101 = calculate_available_frames();
+//			cprintf("after objDELETE = %d \n", counters101.freeBuffered + counters101.freeNotBuffered);
+//
+//
+//		}
+
 	}
 	if(holding_spinlock(&(AllShares.shareslock))) release_spinlock(&(AllShares.shareslock));
+	struct freeFramesCounters counters6 = calculate_available_frames();
+	cprintf("after sem = %d \n", counters6.freeBuffered + counters6.freeNotBuffered);
+
+
 	// [5] All page tables in the entire user virtual memory
 	uint32 page_dir_entry_no;//pdeno
 	cprintf("\n pg");
@@ -510,40 +658,86 @@ void env_free(struct Env *e)
 		uint32 pa = EXTRACT_ADDRESS(e->env_page_directory[page_dir_entry_no]);
 		uint32 *ptr_page_table;
 		ptr_page_table = (uint32*) kheap_virtual_address(pa);
-		// unmap all PTEs in this page table
 
-		  pf_remove_env_page(e,(uint32)ptr_page_table); //remove page table from disk
-		  kfree(ptr_page_table);
-		 e->env_page_directory[page_dir_entry_no] = 0 ;
+		for (int pteno = 0; pteno < 1024; pteno++)
+		{
+			uint32 x = ptr_page_table[pteno] & 0x00000FFF;
+			uint32 perm_available=0x800;
+			if (x==  ( x | ( perm_available))) // Check if the PTE is present
+			{
+				uint32 dfn = EXTRACT_ADDRESS(ptr_page_table[pteno]);
+				ptr_page_table[pteno] = 0;
+				// and declare it free
+				struct FrameInfo* ptr_frame_info = to_frame_info(dfn);
+
+				if( ptr_frame_info != 0 )
+				{
+
+					decrement_references(ptr_frame_info);
+
+					/*********************************************************************************/
+					/*NEW'23 el7:)
+					 * [DONE] unmap_frame(): KEEP THE VALUES OF THE AVAILABLE BITS*/
+					uint32 pte_available_bits = ptr_page_table[pteno] & PERM_AVAILABLE;
+					ptr_page_table[pteno] = pte_available_bits;
+					/*********************************************************************************/
+
+
+				}
+				//free_disk_frame(dfn);
+			}
+//			// remove the disk page from disk page table
+//			uint32 dfn=ptr_page_table[pteno];
+//			ptr_page_table[pteno] = 0;
+//			// and declare it free
+//			free_frame((struct FrameInfo *)dfn);
+			//free_disk_frame(dfn);
+		}
+
+		e->env_page_directory[page_dir_entry_no] = 0 ;
+		kfree(ptr_page_table);
+
 
 		  //tlbflush();//should i really do this??
 
 	}
+
+	struct freeFramesCounters counters5 = calculate_available_frames();
+	cprintf("after pg = %d \n", counters5.freeBuffered + counters5.freeNotBuffered);
+
 	// [6] Directory table
 	cprintf("\n dir");
 	kfree(e->env_page_directory);
 	cprintf("\n dir2");
 	e->env_page_directory = 0;
+	struct freeFramesCounters counters4 = calculate_available_frames();
+	cprintf("after dir = %d \n", counters4.freeBuffered + counters4.freeNotBuffered);
+
 
 	//e->disk_env_pgdir_PA = 0;
 	// [7] User kernel stack
 	delete_user_kern_stack(e);
+
 	cprintf("\n st2");
 
-	//		cprintf("Page working set after loading the program...\n");
-	//		env_page_ws_print(e);
 
-			//	cprintf("Table working set after loading the program...\n");
-			//	env_table_ws_print(e);
+	struct freeFramesCounters counters3 = calculate_available_frames();
+	cprintf("after st = %d \n", counters3.freeBuffered + counters3.freeNotBuffered);
+
 	// [9] remove this program from the page file
 	/*(ALREADY DONE for you)*/
 	pf_free_env(e); /*(ALREADY DONE for you)*/ // (removes all of the program pages from the page file)
 	/*========================*/
+	struct freeFramesCounters counters2 = calculate_available_frames();
+	cprintf("after his1 = %d \n", counters2.freeBuffered + counters2.freeNotBuffered);
 
 	// [10] free the environment (return it back to the free environment list)
 	/*(ALREADY DONE for you)*/
 	free_environment(e); /*(ALREADY DONE for you)*/ // (frees the environment (returns it back to the free environment list))
 	/*========================*/
+	struct freeFramesCounters counters1 = calculate_available_frames();
+	cprintf("after his2 = %d \n", counters1.freeBuffered + counters1.freeNotBuffered);
+
 }
 
 //============================
@@ -555,6 +749,7 @@ void env_exit(void)
 	struct Env* cur_env = get_cpu_proc();
 	assert(cur_env != NULL);
 	sched_exit_env(cur_env->env_id);
+
 	//2024: Replaced by context switch
 	//fos_scheduler();
 	//context_switch(&(curenv->context), mycpu()->scheduler);
@@ -953,7 +1148,7 @@ void* create_user_kern_stack(uint32* ptr_user_page_directory)
 	return kstack ;
 //	panic("KERNEL HEAP is OFF! user kernel stack is not supported");
 #endif
-}
+
 /*2024*/
 //===========================================================
 // 6) DELETE USER KERNEL STACK (One Per Process):

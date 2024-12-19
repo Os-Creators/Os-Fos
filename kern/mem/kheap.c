@@ -84,6 +84,10 @@ void* sbrk(int numOfPages)
 	//MS2: COMMENT THIS LINE BEFORE START CODING====
 	//return (void*)-1 ;
 	//====================================================
+	//cprintf("\n before sbrk");
+	struct freeFramesCounters counters7 = calculate_available_frames();
+	int total1 = counters7.freeBuffered + counters7.freeNotBuffered;
+	cprintf("before sbrk = %d \n", total1);
 
     if (numOfPages == 0)
     {
@@ -108,6 +112,12 @@ void* sbrk(int numOfPages)
 
         segment_break=new_brk;
 
+        struct freeFramesCounters counters8 = calculate_available_frames();
+        int total2 = counters8.freeBuffered + counters8.freeNotBuffered;
+		cprintf("after sbrk = %d \n", counters8.freeBuffered + counters8.freeNotBuffered);
+
+		cprintf("TOTAL sbrk = %d \n", total1 - total2);
+
         return (void*) prev_break;
 }
 
@@ -120,8 +130,17 @@ void* kmalloc(unsigned int size)
 	// Block Allocator
 	if(size <= DYN_ALLOC_MAX_BLOCK_SIZE)
 	{
+		struct freeFramesCounters counters7 = calculate_available_frames();
+		int total1 = counters7.freeBuffered + counters7.freeNotBuffered;
+		//cprintf("before alloc = %d \n", total1);
 
 		void* addr = alloc_block_FF(size);
+
+		struct freeFramesCounters counters8 = calculate_available_frames();
+		int total2 = counters8.freeBuffered + counters8.freeNotBuffered;
+		//cprintf("after alloc = %d \n", counters8.freeBuffered + counters8.freeNotBuffered);
+
+		//cprintf("TOTAL alloc = %d \n", total1 - total2);
 		releaseSleep();
 
 		return addr;
@@ -141,7 +160,9 @@ void* kmalloc(unsigned int size)
 		return NULL;
 	}
 
-
+//	struct freeFramesCounters counters9 = calculate_available_frames();
+//	int total1 = counters9.freeBuffered + counters9.freeNotBuffered;
+	//cprintf("in page = %d \n", counters9.freeBuffered + counters9.freeNotBuffered);
 
 	bool page_found = 0;
 	uint32 return_addr;
@@ -206,6 +227,9 @@ void* kmalloc(unsigned int size)
 	}
 
 
+//	struct freeFramesCounters counters10 = calculate_available_frames();
+//		int total2 = counters10.freeBuffered + counters10.freeNotBuffered;
+//		cprintf("TOTAL in page  = %d \n", total1 - total2);
 
 	if(!page_found)
 	{

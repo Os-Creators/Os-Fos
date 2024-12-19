@@ -135,6 +135,9 @@ void* sys_sbrk(int numOfPages)
 	 * 		be that sys_sbrk returns (void*) -1 and that the segment break and the process heap are unaffected.
 	 * 		You might have to undo any operations you have done so far in this case.
 	 */
+	struct freeFramesCounters counters7 = calculate_available_frames();
+	int total1 = counters7.freeBuffered + counters7.freeNotBuffered;
+	//cprintf("before share = %d \n", total1);
 
 	//TODO: [PROJECT'24.MS2 - #11] [3] USER HEAP - sys_sbrk
 	/*====================================*/
@@ -158,6 +161,14 @@ void* sys_sbrk(int numOfPages)
 
 
 		env->segment_break = (uint32*)new_segment_break;
+
+		struct freeFramesCounters counters8 = calculate_available_frames();
+			int total2 = counters8.freeBuffered + counters8.freeNotBuffered;
+			//cprintf("after alloc = %d \n", counters8.freeBuffered + counters8.freeNotBuffered);
+
+			cprintf("TOTAL sysbrk = %d \n", total1 - total2);
+
+
 		return (void*)prev_segment_break;
 }
 

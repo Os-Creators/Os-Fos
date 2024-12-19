@@ -162,6 +162,7 @@ void set_block_data(void* va, uint32 totalSize, bool isAllocated)
 //=========================================
 void *alloc_block_FF(uint32 size)
 {
+
 	//==================================================================================
 		//DON'T CHANGE THESE LINES==========================================================
 		//==================================================================================
@@ -264,7 +265,6 @@ void *alloc_block_FF(uint32 size)
 		   set_block_data(lfirst597fitblock, lfirst597fitblocksize, 1);
 		   LIST_REMOVE(&freeBlocksList, lfirst597fitblock);
 	   }
-
 
 		//cprintf("header in alloc. Actual addr H:%d H2:%p\n", *((uint32*)mfirst597fitblock-1), (uint32*)(mfirst597fitblock-4));
 

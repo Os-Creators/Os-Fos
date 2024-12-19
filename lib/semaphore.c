@@ -15,6 +15,7 @@ struct semaphore create_semaphore(char *semaphoreName, uint32 value)
 		panic("Failed to allocate memory for semaphore data");
 	}
 
+
 	sys_init_queue(&(semdata->queue));
 	semdata->count = value;
 	strncpy(semdata->name, semaphoreName, sizeof(semdata->name) - 1);
@@ -43,7 +44,6 @@ struct semaphore get_semaphore(int32 ownerEnvID, char* semaphoreName)
 
     struct semaphore sem;
     sem.semdata = semdata;
-
     return sem;
 
 

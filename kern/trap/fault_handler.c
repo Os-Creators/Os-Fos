@@ -504,11 +504,11 @@ void replace(struct Env* faulted_env, int perms, uint32 fault_va)
 
 	if(ret == E_PAGE_NOT_EXIST_IN_PF)
 	{
-	  cprintf("didnot read from disk1 \n");
+	  //cprintf("didnot read from disk1 \n");
 	}
 	else
 	{
-		cprintf("read from disk1 \n");
+		//cprintf("read from disk1 \n");
 	}
 
 
