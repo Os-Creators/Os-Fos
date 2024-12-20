@@ -268,6 +268,9 @@ int getSharedObject(int32 ownerID, char* shareName, void* virtual_address)
 	    return E_SHARED_MEM_NOT_EXISTS;
 	}
 
+	if(!holding_spinlock(&(AllShares.shareslock))) acquire_spinlock(&(AllShares.shareslock));
+
+
 //	if(strcmp(shared_obj->in_sget,"yes") == 0){
 //		shared_obj->sget_va2 = (uint32)virtual_address;
 //		shared_obj->sget_env_id2 = myenv->env_id;
@@ -292,11 +295,7 @@ int getSharedObject(int32 ownerID, char* shareName, void* virtual_address)
 	//strcpy(shared_obj->new_sget->in_sget,"yes");
 
 	//
-
-
-	if(!holding_spinlock(&(AllShares.shareslock))) acquire_spinlock(&(AllShares.shareslock));
-
-
+	
 	uint32 sizeOfPage = ROUNDUP(shared_obj->size,PAGE_SIZE)/PAGE_SIZE;
 	struct FrameInfo** phys_frames = shared_obj->framesStorage;
 	uint32 va = (uint32)virtual_address;
