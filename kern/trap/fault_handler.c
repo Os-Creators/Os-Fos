@@ -462,7 +462,7 @@ void replace(struct Env* faulted_env,uint32 fault_va)
 	 {
 		  if (is_stack_address(fault_va) != 1 && is_heap_address(fault_va) != 1)
 		  {
-			  cprintf("EXIST \n");
+			  //cprintf("EXIST \n");
 			  env_exit();
 		  }
 	 }
@@ -499,7 +499,7 @@ void remove_victim(struct Env* faulted_env, struct WorkingSetElement* victim)
 		// meaning it clears the modified bit as well
 		// pt_set_page_permissions(faulted_env->env_page_directory, victim->virtual_address, 0, PERM_MODIFIED);
 
-		cprintf("MODIFIED \n");
+		//cprintf("MODIFIED \n");
 	}
 
 	unmap_frame(faulted_env->env_page_directory, victim->virtual_address);

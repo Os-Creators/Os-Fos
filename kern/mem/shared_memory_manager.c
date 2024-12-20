@@ -254,7 +254,6 @@ int getSharedObject(int32 ownerID, char* shareName, void* virtual_address)
 
 	if(!holding_spinlock(&(AllShares.shareslock))) acquire_spinlock(&(AllShares.shareslock));
 
-
 	uint32 sizeOfPage = ROUNDUP(shared_obj->size,PAGE_SIZE)/PAGE_SIZE;
 	struct FrameInfo** phys_frames = shared_obj->framesStorage;
 	uint32 va = (uint32)virtual_address;
