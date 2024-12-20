@@ -518,13 +518,21 @@ void env_free(struct Env *e)
 	struct freeFramesCounters counters7 = calculate_available_frames();
 	cprintf("before ws1 = %d \n", counters7.freeBuffered + counters7.freeNotBuffered);
 
-	struct WorkingSetElement *wse;
-	int i =0;
-	LIST_FOREACH(wse, &(e->page_WS_list))
+	int size=LIST_SIZE(&(e->page_WS_list));
+	while(size > 0)
 	{
+		struct WorkingSetElement *wse= LIST_FIRST(&(e->page_WS_list));
 		env_page_ws_invalidate(e, wse->virtual_address);
-		//cprintf("j%d",i++);
+		size--;
+
 	}
+//	struct WorkingSetElement *wse;
+//	int i =0;
+//	LIST_FOREACH(wse, &(e->page_WS_list))
+//	{
+//		env_page_ws_invalidate(e, wse->virtual_address);
+//		//cprintf("j%d",i++);
+//	}
 	struct freeFramesCounters counters = calculate_available_frames();
 	cprintf("after ws1 = %d \n", counters.freeBuffered + counters.freeNotBuffered);
 
