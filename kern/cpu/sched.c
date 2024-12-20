@@ -407,6 +407,8 @@ void clock_interrupt_handler(struct Trapframe* tf)
 		int in_cs = 0;
 
 
+		cprintf("here1");
+
 		if(holding_spinlock(&ProcessQueues.qlock)==0) {
 			acquire_spinlock(&ProcessQueues.qlock);
 			in_cs = 1;//notify that i am who acquired the lock not outside function
@@ -430,6 +432,7 @@ void clock_interrupt_handler(struct Trapframe* tf)
 				}
 			}
 		}
+		cprintf("here");
 		if(holding_spinlock(&ProcessQueues.qlock)==1 && in_cs) release_spinlock(&ProcessQueues.qlock);
 
 	}

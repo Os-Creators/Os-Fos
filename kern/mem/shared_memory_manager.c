@@ -17,7 +17,7 @@
 
 inline void releaseSharedSleep()
 {
-	if(holding_sleeplock(&shared_sleeplock))
+	//if(holding_sleeplock(&shared_sleeplock))
 		release_sleeplock(&shared_sleeplock);
 }
 
@@ -100,10 +100,6 @@ struct Share* create_share(int32 ownerID, char* shareName, uint32 size, uint8 is
     //panic("create_share is not implemented yet");
 	//Your Code is Here...
 	//lamiaa_mahmoud 2022170597
-
-	struct freeFramesCounters counters7 = calculate_available_frames();
-	int total1 = counters7.freeBuffered + counters7.freeNotBuffered;
-	//cprintf("before share = %d \n", total1);
 
 	struct Share* new_share = kmalloc(sizeof(struct Share));
 

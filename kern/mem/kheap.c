@@ -25,13 +25,13 @@ struct sleeplock k_sleeplock;
 
 inline void acquireSleep()
 {
-	if(!holding_sleeplock(&k_sleeplock))
+	//if(!holding_sleeplock(&k_sleeplock))
 		acquire_sleeplock(&k_sleeplock);
 }
 
 inline void releaseSleep()
 {
-	if(holding_sleeplock(&k_sleeplock))
+	//if(holding_sleeplock(&k_sleeplock))
 		release_sleeplock(&k_sleeplock);
 }
 
@@ -85,8 +85,6 @@ void* sbrk(int numOfPages)
 	//return (void*)-1 ;
 	//====================================================
 	//cprintf("\n before sbrk");
-	struct freeFramesCounters counters7 = calculate_available_frames();
-	int total1 = counters7.freeBuffered + counters7.freeNotBuffered;
 
     if (numOfPages == 0)
     {
@@ -111,10 +109,7 @@ void* sbrk(int numOfPages)
 
         segment_break=new_brk;
 
-        struct freeFramesCounters counters8 = calculate_available_frames();
-        int total2 = counters8.freeBuffered + counters8.freeNotBuffered;
-
-		cprintf("TOTAL sbrk = %d \n", total1 - total2);
+		//cprintf("TOTAL sbrk = 1\n");
 
         return (void*) prev_break;
 }

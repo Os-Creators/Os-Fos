@@ -382,7 +382,7 @@ void half_WS_Size(struct Env* e, int isImmidiate)
 /////////////////////////////////////////////////////// Free user mem helper functions
 void reorder_WSList (struct Env* e)
 {
-	cprintf("after reorder \n");
+	//cprintf("after reorder \n");
 
 	   struct WorkingSetElement* last_element = e->page_last_WS_element;
 

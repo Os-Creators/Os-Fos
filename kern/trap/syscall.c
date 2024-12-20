@@ -539,7 +539,7 @@ void sys_bypassPageFault(uint8 instrLength)
 }
 void sys_acquire_shared_sleep(){
 	//acquireSharedSleep();
-	if(!holding_sleeplock(&shared_sleeplock))
+	//if(!holding_sleeplock(&shared_sleeplock))
 		acquire_sleeplock(&shared_sleeplock);
 }
 
