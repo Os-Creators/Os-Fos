@@ -10,7 +10,6 @@
 //#include <inc/memlayout.h>
 #include <inc/environment_definitions.h>
 #include <kern/conc/spinlock.h>
-LIST_HEAD(sget_List, sget_data);
 
 struct Share
 {
@@ -29,15 +28,6 @@ struct Share
 	//sharing permissions (0: ReadOnly, 1:Writable)
 	uint8 isWritable;
 
-	char in_smalloc[64];
-	uint32 smalloc_va;
-
-	char firstTime[64];
-
-	struct
-	{
-		struct sget_List sget_list ;
-	}All_sget;
 	//to store frames to be shared
 	struct FrameInfo** framesStorage;
 
@@ -46,12 +36,6 @@ struct Share
 
 };
 
-struct sget_data{
-	char in_sget[64];
-	uint32 sget_va;
-	uint32 sget_env_id;
-	LIST_ENTRY(sget_data) prev_next_info;
-};
 
 struct sleeplock shared_sleeplock;
 

@@ -107,10 +107,6 @@ struct Share* create_share(int32 ownerID, char* shareName, uint32 size, uint8 is
 
 	struct Share* new_share = kmalloc(sizeof(struct Share));
 
-	struct freeFramesCounters counters8 = calculate_available_frames();
-		int total2 = counters8.freeBuffered + counters8.freeNotBuffered;
-		//cprintf("after alloc = %d \n", counters8.freeBuffered + counters8.freeNotBuffered);
-
 
 	if (new_share == NULL)
 	{
@@ -125,9 +121,6 @@ struct Share* create_share(int32 ownerID, char* shareName, uint32 size, uint8 is
 	new_share->references = 1;
 	new_share->isWritable = isWritable;
 
-	struct freeFramesCounters counters9 = calculate_available_frames();
-		int total3 = counters9.freeBuffered + counters9.freeNotBuffered;
-		//cprintf("after alloc = %d \n", counters8.freeBuffered + counters8.freeNotBuffered);
 
 	uint32 numFrames = ROUNDUP((size + PAGE_SIZE - 1),PAGE_SIZE) / PAGE_SIZE;
 	new_share->framesStorage = create_frames_storage(numFrames);
@@ -141,13 +134,6 @@ struct Share* create_share(int32 ownerID, char* shareName, uint32 size, uint8 is
 	 new_share->ID = (uint32)new_share;
 	 new_share->ID &= 0x7FFFFFFF;
 
-	 struct freeFramesCounters counters10 = calculate_available_frames();
-	int total4 = counters10.freeBuffered + counters10.freeNotBuffered;
-	cprintf("after alloc = %d \n", counters10.freeBuffered + counters10.freeNotBuffered);
-
-	cprintf("TOTAL shareobj = %d \n", total1 - total2);
-	cprintf("TOTAL shareobj2 = %d \n", total2 - total3);
-	cprintf("TOTAL shareobj3 = %d \n", total3 - total4);
 
 	 return new_share;
 }
@@ -222,9 +208,6 @@ int createSharedObject(int32 ownerID, char* shareName, uint32 size, uint8 isWrit
 			return	E_NO_SHARE;
 		}
 
-		strcpy(object->in_smalloc,"yes");
-		object->smalloc_va = (uint32)virtual_address;
-
 		uint32 start=(uint32)virtual_address;
 		size = ROUNDUP(size, PAGE_SIZE);
 		uint32 allocate=size/PAGE_SIZE;
@@ -267,31 +250,6 @@ int getSharedObject(int32 ownerID, char* shareName, void* virtual_address)
 		releaseSharedSleep();
 	    return E_SHARED_MEM_NOT_EXISTS;
 	}
-
-//	if(strcmp(shared_obj->in_sget,"yes") == 0){
-//		shared_obj->sget_va2 = (uint32)virtual_address;
-//		shared_obj->sget_env_id2 = myenv->env_id;
-//		strcpy(shared_obj->in_sget2,"yes");
-//	}else{
-//		strcpy(shared_obj->in_sget,"yes");
-//		shared_obj->sget_va = (uint32)virtual_address;
-//		shared_obj->sget_env_id = myenv->env_id;
-//	}
-//
-	if(strcmp(shared_obj->firstTime,"yes") == 1){
-		LIST_INIT(&shared_obj->All_sget.sget_list) ;
-
-		strcpy(shared_obj->firstTime,"yes");
-	}//else{
-		struct sget_data* new_sget = kmalloc(sizeof(struct sget_data));
-		strcpy(new_sget->in_sget,"yes");
-		new_sget->sget_env_id = myenv->env_id;
-		new_sget->sget_va = (uint32)virtual_address;
-		LIST_INSERT_TAIL(&(shared_obj->All_sget.sget_list),new_sget);
-	//}
-	//strcpy(shared_obj->new_sget->in_sget,"yes");
-
-	//
 
 
 	if(!holding_spinlock(&(AllShares.shareslock))) acquire_spinlock(&(AllShares.shareslock));
@@ -383,8 +341,6 @@ int freeSharedObject(int32 sharedObjectID, void *startVA)
 		  return -1;
 	  }
 
-	  strcpy(sObject->in_smalloc,"no");
-	  //strcpy(sObject->in_sget,"no");
 
 	  if(holding_spinlock(&(AllShares.shareslock))==1)release_spinlock(&(AllShares.shareslock));
 

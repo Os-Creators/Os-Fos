@@ -514,9 +514,6 @@ void env_free(struct Env *e)
 	//should i remove all vm from my array
 	// [1] All pages in the page working set
 	// [2] Working set itself
-	cprintf("\n wk");
-	struct freeFramesCounters counters7 = calculate_available_frames();
-	cprintf("before ws1 = %d \n", counters7.freeBuffered + counters7.freeNotBuffered);
 
 	int size=LIST_SIZE(&(e->page_WS_list));
 	while(size > 0)
@@ -526,220 +523,94 @@ void env_free(struct Env *e)
 		size--;
 
 	}
-//	struct WorkingSetElement *wse;
-//	int i =0;
-//	LIST_FOREACH(wse, &(e->page_WS_list))
-//	{
-//		env_page_ws_invalidate(e, wse->virtual_address);
-//		//cprintf("j%d",i++);
-//	}
-	struct freeFramesCounters counters = calculate_available_frames();
-	cprintf("after ws1 = %d \n", counters.freeBuffered + counters.freeNotBuffered);
 
-	//kfree(&(e->page_WS_list));
 	// [3] ALL shared objects (if any)
 	// [4] ALL semaphores (if any)
-	cprintf("\n sem");
-	cprintf("list size : %d\n",LIST_SIZE(&AllShares.shares_list));
 
-	uint32 by_smalloc = 0;
 	struct Share* object;
 	if(!holding_spinlock(&(AllShares.shareslock))) acquire_spinlock(&(AllShares.shareslock));
-	cprintf("here\n");
+
 	LIST_FOREACH(object,&AllShares.shares_list){
 
 		if(object->ownerID == e->env_id){
-			cprintf("here2\n");
-//			uint32 pa = to_physical_address(object->framesStorage[0]);
-			//to_frame_info()
-//			uint32 va = kheap_virtual_address(pa);
-			//strcmp(object->in_smalloc , "yes");
-			if(strcmp(object->in_smalloc , "yes") == 0){
-				cprintf("\nyes");
 
-				free_user_mem(e, object->smalloc_va, object->size);
-				strcpy(object->in_smalloc,"no");
-			}
-
-			/*if(strcmp(object->in_sget , "yes") == 0){
-				cprintf("\nyes get");
-				if(object->sget_env_id == e->env_id){
-					free_user_mem(e, object->sget_va, object->size);
-					strcpy(object->in_sget,"no");
-				}else if(object->sget_env_id2 == e->env_id){
-					free_user_mem(e, object->sget_va2, object->size);
-					strcpy(object->in_sget,"no");
-				}
-			}*/
-
-
-			object->references--;
-
-//			//if(object->references == 0){
-//			LIST_REMOVE(&(AllShares.shares_list),object);
-//
-//			struct freeFramesCounters counters100 = calculate_available_frames();
-//			cprintf("before objDELETE = %d \n", counters100.freeBuffered + counters100.freeNotBuffered);
-//
-//			kfree(object->framesStorage);
-//			kfree(object);
-//
-//			struct freeFramesCounters counters101 = calculate_available_frames();
-//			cprintf("after objDELETE = %d \n", counters101.freeBuffered + counters101.freeNotBuffered);
-//
-//
-//			//}
-
-
-
-		}
-		struct sget_data* new_sget;
-		LIST_FOREACH(new_sget,&(object->All_sget.sget_list)){
-			if(new_sget->sget_env_id == e->env_id){
-				cprintf("\nyes get2");
-
-				free_user_mem(e, new_sget->sget_va, object->size);
-				strcpy(new_sget->in_sget,"no");
-
-				LIST_REMOVE(&(object->All_sget.sget_list),new_sget);
-				kfree(new_sget);
-
-				object->references--;
-
-			}
-		}
-
-//		if(strcmp(object->in_sget , "yes") == 0){
-//			cprintf("\nyes get");
-//			if(object->sget_env_id == e->env_id){
-//				cprintf("\nyes get2");
-//
-//				free_user_mem(e, object->sget_va, object->size);
-//				strcpy(object->in_sget,"no");
-//
-//
-//				object->references--;
-//
-//			}
-//		}
-//		if(strcmp(object->in_sget2 , "yes") == 0){
-//			cprintf("\nyes get");
-//			if(object->sget_env_id2 == e->env_id){
-//				cprintf("\nyes get2");
-//
-//				free_user_mem(e, object->sget_va2, object->size);
-//				strcpy(object->in_sget2,"no");
-//
-//
-//				object->references--;
-//
-//			}
-//		}
-		if(object->references == 0){
 			LIST_REMOVE(&(AllShares.shares_list),object);
-
-			struct freeFramesCounters counters100 = calculate_available_frames();
-			cprintf("before objDELETE = %d \n", counters100.freeBuffered + counters100.freeNotBuffered);
-
 			kfree(object->framesStorage);
 			kfree(object);
-
-			struct freeFramesCounters counters101 = calculate_available_frames();
-			cprintf("after objDELETE = %d \n", counters101.freeBuffered + counters101.freeNotBuffered);
 
 
 		}
 
 	}
 	if(holding_spinlock(&(AllShares.shareslock))) release_spinlock(&(AllShares.shareslock));
-	struct freeFramesCounters counters6 = calculate_available_frames();
-	cprintf("after sem = %d \n", counters6.freeBuffered + counters6.freeNotBuffered);
 
 
 	// [5] All page tables in the entire user virtual memory
 	uint32 page_dir_entry_no;//pdeno
-	cprintf("\n pg");
 
 	for (page_dir_entry_no = 0; page_dir_entry_no < PDX(USER_TOP) ; page_dir_entry_no++)
 	{
 		// only look at mapped page tables
 		if (!(e->env_page_directory[page_dir_entry_no] & PERM_PRESENT))
 			continue;
+
 		// find the pa and va of the page table
 		uint32 pa = EXTRACT_ADDRESS(e->env_page_directory[page_dir_entry_no]);
 		uint32 *ptr_page_table;
 		ptr_page_table = (uint32*) kheap_virtual_address(pa);
 
-//		for (int pteno = 0; pteno < 1024; pteno++)
-//		{
-//			//its user
-//			uint32 x = ptr_page_table[pteno] & 0x00000FFF;
-//			uint32 perm_available=0x800;
-//			if (x==  ( x | ( perm_available))) // Check if the PTE is present
-//			{
-//				uint32 dfn = EXTRACT_ADDRESS(ptr_page_table[pteno]);
-//				ptr_page_table[pteno] = 0;
-//				// and declare it free
-//				struct FrameInfo* ptr_frame_info = to_frame_info(dfn);
-//
-//				if( ptr_frame_info != 0 )
-//				{
-//					decrement_references(ptr_frame_info);
-//					/*********************************************************************************/
-//					/*NEW'23 el7:)
-//					 * [DONE] unmap_frame(): KEEP THE VALUES OF THE AVAILABLE BITS*/
-//					uint32 pte_available_bits = ptr_page_table[pteno] & PERM_AVAILABLE;
-//					ptr_page_table[pteno] = pte_available_bits;
-//					/*********************************************************************************/
-//
-//				}
-//			}
-//
-//		}
+		for (int pteno = 0; pteno < 1024; pteno++)
+		{
+			//it's copy of free_user_mem()
+			uint32 x = ptr_page_table[pteno] & 0x00000FFF;
+			if (x==  ( x | ( PERM_PRESENT))) // Check if the PTE is present
+			{
+				uint32 dfn = EXTRACT_ADDRESS(ptr_page_table[pteno]);
+				ptr_page_table[pteno] = 0;
+				// and declare it free
+				struct FrameInfo* ptr_frame_info = to_frame_info(dfn);
+
+				if( ptr_frame_info != 0 )
+				{
+					decrement_references(ptr_frame_info);
+					/*********************************************************************************/
+					/*NEW'23 el7:)
+					 * [DONE] unmap_frame(): KEEP THE VALUES OF THE AVAILABLE BITS*/
+					uint32 pte_available_bits = ptr_page_table[pteno] & PERM_AVAILABLE;
+					ptr_page_table[pteno] = pte_available_bits;
+					/*********************************************************************************/
+
+				}
+			}
+
+		}
 
 		e->env_page_directory[page_dir_entry_no] = 0 ;
 		kfree(ptr_page_table);
-
 
 		  //tlbflush();//should i really do this??
 
 	}
 
-	struct freeFramesCounters counters5 = calculate_available_frames();
-	cprintf("after pg = %d \n", counters5.freeBuffered + counters5.freeNotBuffered);
-
 	// [6] Directory table
-	cprintf("\n dir");
 	kfree(e->env_page_directory);
-	cprintf("\n dir2");
 	e->env_page_directory = 0;
-	struct freeFramesCounters counters4 = calculate_available_frames();
-	cprintf("after dir = %d \n", counters4.freeBuffered + counters4.freeNotBuffered);
 
-
-	//e->disk_env_pgdir_PA = 0;
 	// [7] User kernel stack
 	delete_user_kern_stack(e);
-
-	cprintf("\n st2");
-
-
-	struct freeFramesCounters counters3 = calculate_available_frames();
-	cprintf("after st = %d \n", counters3.freeBuffered + counters3.freeNotBuffered);
 
 	// [9] remove this program from the page file
 	/*(ALREADY DONE for you)*/
 	pf_free_env(e); /*(ALREADY DONE for you)*/ // (removes all of the program pages from the page file)
 	/*========================*/
 	struct freeFramesCounters counters2 = calculate_available_frames();
-	cprintf("after his1 = %d \n", counters2.freeBuffered + counters2.freeNotBuffered);
 
 	// [10] free the environment (return it back to the free environment list)
 	/*(ALREADY DONE for you)*/
 	free_environment(e); /*(ALREADY DONE for you)*/ // (frees the environment (returns it back to the free environment list))
 	/*========================*/
-	struct freeFramesCounters counters1 = calculate_available_frames();
-	cprintf("after his2 = %d \n", counters1.freeBuffered + counters1.freeNotBuffered);
+//	struct freeFramesCounters counters1 = calculate_available_frames();
+//	cprintf("after kill = %d \n", counters1.freeBuffered + counters1.freeNotBuffered);
 
 }
 
