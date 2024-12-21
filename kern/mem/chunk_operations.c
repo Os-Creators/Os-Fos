@@ -135,9 +135,9 @@ void* sys_sbrk(int numOfPages)
 	 * 		be that sys_sbrk returns (void*) -1 and that the segment break and the process heap are unaffected.
 	 * 		You might have to undo any operations you have done so far in this case.
 	 */
-	struct freeFramesCounters counters7 = calculate_available_frames();
-	int total1 = counters7.freeBuffered + counters7.freeNotBuffered;
-	//cprintf("before share = %d \n", total1);
+//	struct freeFramesCounters counters7 = calculate_available_frames();
+//	int total1 = counters7.freeBuffered + counters7.freeNotBuffered;
+//	//cprintf("before share = %d \n", total1);
 
 	//TODO: [PROJECT'24.MS2 - #11] [3] USER HEAP - sys_sbrk
 	/*====================================*/
@@ -162,11 +162,11 @@ void* sys_sbrk(int numOfPages)
 
 		env->segment_break = (uint32*)new_segment_break;
 
-		struct freeFramesCounters counters8 = calculate_available_frames();
-			int total2 = counters8.freeBuffered + counters8.freeNotBuffered;
+//		struct freeFramesCounters counters8 = calculate_available_frames();
+//			int total2 = counters8.freeBuffered + counters8.freeNotBuffered;
 			//cprintf("after alloc = %d \n", counters8.freeBuffered + counters8.freeNotBuffered);
 
-			cprintf("TOTAL sysbrk = %d \n", total1 - total2);
+			//cprintf("TOTAL sysbrk = %d \n", total1 - total2);
 
 
 		return (void*)prev_segment_break;
@@ -218,7 +218,7 @@ void free_user_mem(struct Env* e, uint32 virtual_address, uint32 size)
 // inctst();
 // return;
  /*====================================*/
-  cprintf("ALLOCATED IS %d\n",allocated);
+  //cprintf("ALLOCATED IS %d\n",allocated);
   for (uint32 itr = 0; itr < allocated; itr ++) {
 
    uint32 x = pt_get_page_permissions(e->env_page_directory,va);
@@ -228,10 +228,10 @@ void free_user_mem(struct Env* e, uint32 virtual_address, uint32 size)
        //freeFree ALL pagespage file
     pf_remove_env_page(e,va);
     //Free ONLY pages that are resident in the working set from the memory
-    cprintf("INSIDE free user mem 1\n");
+    //cprintf("INSIDE free user mem 1\n");
 
     env_page_ws_invalidate(e, va);
-    cprintf("INSIDE free user mem 2\n");
+    //cprintf("INSIDE free user mem 2\n");
     //unmap
     unmap_frame(e->env_page_directory,va);
     }

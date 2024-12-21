@@ -283,8 +283,6 @@ void sched_run_env(uint32 envId)
 		if(ptr_env->env_id == envId)
 		{
 			sched_remove_new(ptr_env);
-			if(ptr_env == NULL)
-				cprintf("0");
 			ptr_env->env_ticks = ticks;//shimaa
 			sched_insert_ready(ptr_env);
 
